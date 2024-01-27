@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <stdbool.h>
@@ -11,9 +12,26 @@
 #define MAX_MESSAGE_LENGTH 1000
 
 void print_command(int argc, char * const argv[]);
-int run_init(int argc, char * const argv[]);
 
-int run_init(int argc, char * const argv[]) {
+int run_init(int argc, char * const argv[]);
+int create_configs(char *username, char *email);
+
+int create_configs(char *username, char *email) 
+{
+    FILE *file = fopen(".neogit/config", "w");
+    if (file == NULL) return 1;
+
+    fprintf(file, "username: %s\n", username);
+    fprintf(file, "email: %s\n", email);
+    fprintf(file, "branch: %s\n", "main");
+
+    fclose(file);
+
+    return 0;
+}
+
+int run_init(int argc, char * const argv[]) 
+{
     char cwd[MAX_FILENAME_LENGTH];
     if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
     
@@ -29,6 +47,7 @@ int run_init(int argc, char * const argv[]) {
                 exists = true;
             }
         }
+        closedir(dir);
         
         if (getcwd(tmp_dir, sizeof(tmp_dir)) == NULL) return 1;
         if (strcmp(tmp_dir, "/")) {
@@ -39,16 +58,19 @@ int run_init(int argc, char * const argv[]) {
 
     } while (strcmp(tmp_dir, "/"));
 
-    
+    if (chdir(cwd) != 0) return 1;
+
     if (exists) {
         perror("neogit repo already exists!");
     } else {
-        // TODO
+        if (mkdir(".neogit", 0755) != 0) return 1;
+        create_configs("soha", "soha.niroomand@gmail.com");
     }
     return 0;
 }
 
-void print_command(int argc, char * const argv[]) {
+void print_command(int argc, char * const argv[]) 
+{
     for (int i = 0; i < argc; i++) {
         fprintf(stdout, "%s ", argv[i]);
     }
@@ -58,7 +80,8 @@ void print_command(int argc, char * const argv[]) {
 //#define _DEB
 
 #ifdef _DEB
-int main() {
+int main() 
+{
     int argc = 2;
     char *argv[] = {"neogit", "init"};
 
