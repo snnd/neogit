@@ -1,23 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <stdbool.h>
-#include "file_functions.h"
-
-
-#define MAX_FILENAME_LENGTH 1000
-#define MAX_COMMIT_MESSAGE_LENGTH 2000
-#define MAX_LINE_LENGTH 1000
-#define MAX_MESSAGE_LENGTH 1000
-
-void print_command(int argc, char * const argv[]);
-
-int run_init(int argc, char * const argv[]);
-int create_configs(char *username, char *email);
-
-int run_add(int argc, char * const argv[]);
-int add_to_staging(char *filepath);
+#include <header.h>
 
 int create_configs(char *username, char *email) 
 {
@@ -28,6 +9,9 @@ int create_configs(char *username, char *email)
     fprintf(file, "email: %s\n", email);
     fprintf(file, "branch: %s\n", "main");
 
+    fclose(file);
+
+    file = fopen(".neogit/tracks", "w");
     fclose(file);
 
     file = fopen(".neogit/staging", "w");
