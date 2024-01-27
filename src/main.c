@@ -16,6 +16,9 @@ void print_command(int argc, char * const argv[]);
 int run_init(int argc, char * const argv[]);
 int create_configs(char *username, char *email);
 
+int run_add(int argc, char * const argv[]);
+int add_to_staging(char *filepath);
+
 int create_configs(char *username, char *email) 
 {
     FILE *file = fopen(".neogit/config", "w");
@@ -25,6 +28,9 @@ int create_configs(char *username, char *email)
     fprintf(file, "email: %s\n", email);
     fprintf(file, "branch: %s\n", "main");
 
+    fclose(file);
+
+    file = fopen(".neogit/staging", "w");
     fclose(file);
 
     return 0;
@@ -69,6 +75,42 @@ int run_init(int argc, char * const argv[])
     return 0;
 }
 
+int add_to_staging(char *filepath) 
+{
+    FILE *file = fopen(".neogit/staging", "r");
+    if (file == NULL) return 1;
+
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = sizeof(line);
+        if (line > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+
+        if (!strcmp(line, filepath)) return 0;
+    }
+    fclose(file);
+
+    file = fopen(".neogit/staging", "a");
+    if (file == NULL) return 1;
+
+    fprintf(file, "%s\n", filepath);
+    fclose(file);
+
+    return 0;
+}
+
+int run_add(int argc, char * const argv[])
+{
+    if (argc < 3) {
+        perror("invalid command");
+        return 1;
+    }
+
+    char *filepath = argv[2];
+    if (add_to_staging(filepath) != 0) return 1;
+
+    return 0;
+}
+
 void print_command(int argc, char * const argv[]) 
 {
     for (int i = 0; i < argc; i++) {
@@ -97,6 +139,9 @@ int main(int argc, char *argv[])
 
     if (!strcmp(argv[1], "init")) {
         run_init(argc, argv);
+    } 
+    else if (!strcmp(argv[1], "add")) {
+        run_add(argc, argv);
     }
 
     return 0;
