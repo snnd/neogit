@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     else if (!strcmp(argv[1], "add")) run_add(argc, argv);
     // else if (!strcmp(argv[1], "reset") && !strcmp(argv[2], "-undo")) run_reset_undo();
     // else if (!strcmp(argv[1], "reset") && !strcmp(argv[2], "-f")) run_reset_f();
-    else if (!strcmp(argv[1], "reset")) run_reset();
+    else if (!strcmp(argv[1], "reset")) run_reset(argc, argv);
 
     return 0;
 }

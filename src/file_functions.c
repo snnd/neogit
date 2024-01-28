@@ -10,6 +10,12 @@ int create_configs()
 
     if (mkdir(".neogit/configs", 0755) != 0) return 1;
 
+    file = fopen(".neogit/configs/address", "w");
+    char address[MAX_PATH_LENGTH];
+    getcwd(address, sizeof(address));
+    fprintf("%s\n", address);
+    fclose(file);
+
     file = fopen(".neogit/configs/username", "w");
     fclose(file); 
 
@@ -29,6 +35,11 @@ int run_config_username(int argc, char * const argv[])
         printf("invalid command\n");
         return 1;
     }
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
     if (!strcmp(argv[2], "--global") && argc == 5) {
         FILE *file = fopen("/home/sana_niroomand/project/include/configs/username", "w");
         fprintf(file, "%s\n", argv[4]);
@@ -44,6 +55,8 @@ int run_config_username(int argc, char * const argv[])
         return 1;
     }
 
+    if (chdir(cwd) != 0) return 1;
+
     return 0;
 }
 
@@ -53,6 +66,11 @@ int run_config_email(int argc, char * const argv[])
         printf("invalid command\n");
         return 1;
     }
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
     if (!strcmp(argv[2], "--global") && argc == 5) {
         FILE *file = fopen("/home/sana_niroomand/project/include/configs/email", "w");
         fprintf(file, "%s\n", argv[4]);
@@ -67,6 +85,8 @@ int run_config_email(int argc, char * const argv[])
         printf("invalid command\n");
         return 1;
     }
+
+    if (chdir(cwd) != 0) return 1;
 
     return 0;
 }
@@ -93,7 +113,7 @@ int run_init(int argc, char * const argv[])
         if (getcwd(tmp_dir, sizeof(tmp_dir)) == NULL) return 1;
         if (strcmp(tmp_dir, "/")) {
             if (chdir("..") != 0) return 1;
-        } else closedir(dir);
+        }
 
         // printf("%s\n", tmp_dir);
 
@@ -112,10 +132,12 @@ int run_init(int argc, char * const argv[])
 
 int add_to_staging(char *path) 
 {
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
     FILE *file = fopen(".neogit/staging", "r");
     if (file == NULL) return 1;
-
-    
 
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file) != NULL) {
@@ -132,11 +154,14 @@ int add_to_staging(char *path)
     fprintf(file, "%s\n", path);
     fclose(file);
 
+    if (chdir(cwd) != 0) return 1;
+
     return 0;
 }
 
 int is_staged(char *path)
 {
+
     FILE *file = fopen(".neogit/staging", "r");
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file) != NULL) {
@@ -169,21 +194,24 @@ int run_add_n_recursive(int depth, int first_depth)
     while ((entry = readdir(dir)) != NULL) {
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
 
+        if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
         if (entry->d_type == DT_DIR) {
-            if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
             add_space(depth, first_depth);
             printf(BLU);
             printf("%s ", entry->d_name);
-            if (is_staged(cwd)) {
-                if (strstr())
-            }
+            if (is_staged(cwd)) printf("staged\n");
+            else printf("not staged\n");
             printf(RESET);
             if (chdir(entry->d_name) != 0) return 1;
             run_add_n_recursive(depth - 1, first_depth);
             if (chdir(cwd) != 0) return 1;
         } else {
             add_space(depth, first_depth);
-            printf("%s\n", entry->d_name);
+            printf("%s ", entry->d_name);
+            strcat(cwd, "/");
+            strcat(cwd, entry->d_name);
+            if (is_staged(cwd)) printf("staged\n");
+            else printf("not staged\n");
         }  
     }
 
@@ -211,12 +239,13 @@ int run_add_f(int argc, char * const argv[])
     }
 
     for (int i = 0; i < argc - 3; i++) {
-        char *path = argv[3 + i];
-        
-        if (path_exists(path)) {
-            if (add_to_staging(path) != 0) return 1;
-        } else
+        char* path = realpath(argv[3 + i], NULL);
+
+        if(path == NULL){
             printf("path \"%s\" does not exist!\n", path);
+        } else {
+            if (add_to_staging(path) != 0) return 1;
+        }
     }
 
     return 0;
@@ -229,13 +258,12 @@ int run_add(int argc, char * const argv[])
         return 1;
     }
 
-    char *path = argv[2];
-    
-    if (path_exists(path)) {
-        if (add_to_staging(path) != 0) return 1;
-    } else {
-        printf("such a path does not exist!\n");
+    char* path = realpath(argv[2], NULL);
+    if(path == NULL){
+        printf("this path doesn't exist!\n");
         return 1;
+    } else {
+        if (add_to_staging(path) != 0) return 1;
     }
 
     return 0;
@@ -248,6 +276,11 @@ int run_reset(int argc, char * const argv[])
         return 1;
     }
 
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    char *path = realpath(argv[2], NULL);
     FILE *file = fopen(".neogit/staging", "r");
     FILE *result = fopen(".neogit/result", "w");
     char line[MAX_LINE_LENGTH];
@@ -256,34 +289,30 @@ int run_reset(int argc, char * const argv[])
         if (length > 0 && line[length - 1] == '\n')
             line[length - 1] = '\0';
 
-        if (strcmp(line, argv[2])) {
-            fputs(line, result);
-        }
+        if (strcmp(line, path))
+            fprintf(result, "%s\n", line);
     }
     fclose(file); fclose(result);
     if (remove(".neogit/staging") != 0) return 1;
     if (rename(".neogit/result", ".neogit/staging") != 0) return 1;
+
+    if (chdir(cwd) != 0) return 1;
     
     return 0;
 }
 
-int is_regular_file(char *path)
+int go_to_main_address()
 {
-    struct stat path_stat;
-    stat(path, &path_stat);
-    return S_ISREG(path_stat.st_mode);
-}
+    while (true) {
+        DIR *dir = opendir(".");
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            if (!(entry->d_name, ".neogit")) return 0;
+        }
+        if (chmod("..") != 0) return 1;
+    }
 
-int path_exists(char *path)
-{
-    if (is_regular_file) {
-        if (fopen(path, "r") == NULL) return 0;
-        else return 1;
-    }
-    else {
-        if (opendir(path) == NULL) return 0;
-        else return 1;
-    }
+    return 0;
 }
 
 void print_command(int argc, char * const argv[]) 
