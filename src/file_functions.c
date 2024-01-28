@@ -93,7 +93,7 @@ int run_init(int argc, char * const argv[])
         if (getcwd(tmp_dir, sizeof(tmp_dir)) == NULL) return 1;
         if (strcmp(tmp_dir, "/")) {
             if (chdir("..") != 0) return 1;
-        }
+        } else closedir(dir);
 
         // printf("%s\n", tmp_dir);
 
@@ -157,7 +157,7 @@ void add_space(int depth, int first_depth)
 
 int run_add_n_recursive(int depth, int first_depth)
 {
-    if (depth == 0) return;
+    if (depth == 0) return 0;
 
     struct dirent *entry;
 
@@ -174,7 +174,9 @@ int run_add_n_recursive(int depth, int first_depth)
             add_space(depth, first_depth);
             printf(BLU);
             printf("%s ", entry->d_name);
-            if (is_staged(cwd))
+            if (is_staged(cwd)) {
+                if (strstr())
+            }
             printf(RESET);
             if (chdir(entry->d_name) != 0) return 1;
             run_add_n_recursive(depth - 1, first_depth);
@@ -184,6 +186,8 @@ int run_add_n_recursive(int depth, int first_depth)
             printf("%s\n", entry->d_name);
         }  
     }
+
+    closedir(dir);
 
     return 0;
 }
@@ -208,22 +212,11 @@ int run_add_f(int argc, char * const argv[])
 
     for (int i = 0; i < argc - 3; i++) {
         char *path = argv[3 + i];
-
-        bool exists = false;
-        struct dirent *entry;
-        DIR *dir = opendir(".");
-        if (dir == NULL) return 1;
-
-        while ((entry = readdir(dir)) != NULL) {
-            if (!strcmp(entry->d_name, path))
-                exists = true;
-        }
         
-        if (exists) {
+        if (path_exists(path)) {
             if (add_to_staging(path) != 0) return 1;
-        } else {
+        } else
             printf("path \"%s\" does not exist!\n", path);
-        }
     }
 
     return 0;
@@ -237,18 +230,8 @@ int run_add(int argc, char * const argv[])
     }
 
     char *path = argv[2];
-
-    bool exists = false;
-    struct dirent *entry;
-    DIR *dir = opendir(".");
-    char wd[MAX_FILENAME_LENGTH];
-    if (dir == NULL) return 1;
-    while ((entry = readdir(dir)) != NULL) {
-        if (!strcmp(entry->d_name, path))
-            exists = true;
-    }
     
-    if (exists) {
+    if (path_exists(path)) {
         if (add_to_staging(path) != 0) return 1;
     } else {
         printf("such a path does not exist!\n");
@@ -284,24 +267,23 @@ int run_reset(int argc, char * const argv[])
     return 0;
 }
 
-char* main_directory()
+int is_regular_file(char *path)
 {
-    char cwd[MAX_FILENAME_LENGTH], main[MAX_FILENAME_LENGTH];
-    getcwd(cwd, sizeof(cwd));
-    struct dirent *entry;
-    int flag = 0;
-    while (true) {
-        DIR *dir = opendir(".");
-        while ((entry = readdir(dir)) != NULL) {
-            if (!strcmp(entry->d_name, ".neogit")) {flag = 1; break;}
-        }
-        if (flag) break;
-        chdir("..");
-    }
+    struct stat path_stat;
+    stat(path, &path_stat);
+    return S_ISREG(path_stat.st_mode);
+}
 
-    getcwd(main, sizeof(main));
-    chdir(cwd);
-    return main;
+int path_exists(char *path)
+{
+    if (is_regular_file) {
+        if (fopen(path, "r") == NULL) return 0;
+        else return 1;
+    }
+    else {
+        if (opendir(path) == NULL) return 0;
+        else return 1;
+    }
 }
 
 void print_command(int argc, char * const argv[]) 

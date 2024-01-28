@@ -3,6 +3,9 @@
 #include <string.h>
 #include <dirent.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define RED   "\x1B[31m"
 #define GRN   "\x1B[32m"
@@ -18,10 +21,11 @@
 #define MAX_LINE_LENGTH 1000
 #define MAX_MESSAGE_LENGTH 1000
 #define MAX_NAME_LENGTH 1000
+#define MAX_PATH_LENGTH 2000
 
 void print_command(int argc, char * const argv[]);
-char* main_directory();
-
+int is_regular_file(char *path);
+int path_exists(char *path);
 
 int run_init(int argc, char * const argv[]);
 int create_configs();
@@ -31,19 +35,3 @@ int run_config_email(int argc, char * const argv[]);
 
 int run_add(int argc, char * const argv[]);
 int add_to_staging(char *filepath);
-
-// int run_reset(int argc, char * const argv[]);
-// int remove_from_staging(char *filepath);
-
-// int run_commit(int argc, char * const argv[]);
-// int inc_last_commit_ID();
-// bool check_file_directory_exists(char *filepath);
-// int commit_staged_file(int commit_ID, char *filepath);
-// int track_file(char *filepath);
-// bool is_tracked(char *filepath);
-// int create_commit_file(int commit_ID, char *message);
-// int find_file_last_commit(char* filepath);
-
-// int run_checkout(int argc, char *const argv[]);
-// int find_file_last_change_before_commit(char *filepath, int commit_ID);
-// int checkout_file(char *filepath, int commit_ID);
