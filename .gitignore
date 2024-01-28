@@ -1,5 +1,5 @@
 # Tests folder
-tests/
+include/configs
 
 # Compiled object files
 *.slo
