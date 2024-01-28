@@ -20,6 +20,8 @@
 #define MAX_NAME_LENGTH 1000
 
 void print_command(int argc, char * const argv[]);
+char* main_directory();
+
 
 int run_init(int argc, char * const argv[]);
 int create_configs();

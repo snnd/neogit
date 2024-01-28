@@ -115,6 +115,8 @@ int add_to_staging(char *path)
     FILE *file = fopen(".neogit/staging", "r");
     if (file == NULL) return 1;
 
+    
+
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file) != NULL) {
         int length = strlen(line);
@@ -168,11 +170,12 @@ int run_add_n_recursive(int depth, int first_depth)
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
 
         if (entry->d_type == DT_DIR) {
+            if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
             add_space(depth, first_depth);
             printf(BLU);
-            printf("%s\n", entry->d_name);
+            printf("%s ", entry->d_name);
+            if (is_staged(cwd))
             printf(RESET);
-            if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
             if (chdir(entry->d_name) != 0) return 1;
             run_add_n_recursive(depth - 1, first_depth);
             if (chdir(cwd) != 0) return 1;
@@ -238,8 +241,8 @@ int run_add(int argc, char * const argv[])
     bool exists = false;
     struct dirent *entry;
     DIR *dir = opendir(".");
+    char wd[MAX_FILENAME_LENGTH];
     if (dir == NULL) return 1;
-
     while ((entry = readdir(dir)) != NULL) {
         if (!strcmp(entry->d_name, path))
             exists = true;
@@ -253,6 +256,52 @@ int run_add(int argc, char * const argv[])
     }
 
     return 0;
+}
+
+int run_reset(int argc, char * const argv[])
+{
+    if (argc < 3) {
+        printf("invalid command\n");
+        return 1;
+    }
+
+    FILE *file = fopen(".neogit/staging", "r");
+    FILE *result = fopen(".neogit/result", "w");
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n')
+            line[length - 1] = '\0';
+
+        if (strcmp(line, argv[2])) {
+            fputs(line, result);
+        }
+    }
+    fclose(file); fclose(result);
+    if (remove(".neogit/staging") != 0) return 1;
+    if (rename(".neogit/result", ".neogit/staging") != 0) return 1;
+    
+    return 0;
+}
+
+char* main_directory()
+{
+    char cwd[MAX_FILENAME_LENGTH], main[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    struct dirent *entry;
+    int flag = 0;
+    while (true) {
+        DIR *dir = opendir(".");
+        while ((entry = readdir(dir)) != NULL) {
+            if (!strcmp(entry->d_name, ".neogit")) {flag = 1; break;}
+        }
+        if (flag) break;
+        chdir("..");
+    }
+
+    getcwd(main, sizeof(main));
+    chdir(cwd);
+    return main;
 }
 
 void print_command(int argc, char * const argv[]) 
