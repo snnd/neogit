@@ -144,7 +144,7 @@ int add_to_staging(char *path)
         int length = strlen(line);
         if (line > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
 
-        if (!strcmp(line, path)) return 0;
+        if (!strstr(path, line)) return 0;
     }
     fclose(file);
 
@@ -161,6 +161,9 @@ int add_to_staging(char *path)
 
 int is_staged(char *path)
 {
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
 
     FILE *file = fopen(".neogit/staging", "r");
     char line[MAX_LINE_LENGTH];
@@ -168,8 +171,10 @@ int is_staged(char *path)
         int length = strlen(line);
         if (line > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
 
-        if (!strcmp(line, path)) return 1;
+        if (strstr(path, line)) {chdir(cwd); return 1;}
     }
+
+    chdir(cwd);
 
     return 0;
 }
@@ -177,7 +182,7 @@ int is_staged(char *path)
 void add_space(int depth, int first_depth)
 {
     for (int i = 0; i < first_depth - depth; i++)
-        printf("  ");
+        printf("   ");
 }
 
 int run_add_n_recursive(int depth, int first_depth)
@@ -189,7 +194,7 @@ int run_add_n_recursive(int depth, int first_depth)
     DIR *dir = opendir(".");
 
     if (dir == NULL) return 1;
-    char cwd[MAX_FILENAME_LENGTH];
+    char cwd[MAX_PATH_LENGTH];
 
     while ((entry = readdir(dir)) != NULL) {
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
@@ -197,10 +202,13 @@ int run_add_n_recursive(int depth, int first_depth)
         if (getcwd(cwd, sizeof(cwd)) == NULL) return 1;
         if (entry->d_type == DT_DIR) {
             add_space(depth, first_depth);
-            printf(BLU);
+            printf(MAG);
             printf("%s ", entry->d_name);
-            if (is_staged(cwd)) printf("staged\n");
-            else printf("not staged\n");
+            char help[MAX_PATH_LENGTH]; strcpy(help, cwd);
+            strcat(help, "/");
+            strcat(help, entry->d_name);
+            if (is_staged(help)) printf("(staged)\n");
+            else printf("(not staged)\n");
             printf(RESET);
             if (chdir(entry->d_name) != 0) return 1;
             run_add_n_recursive(depth - 1, first_depth);
@@ -208,10 +216,11 @@ int run_add_n_recursive(int depth, int first_depth)
         } else {
             add_space(depth, first_depth);
             printf("%s ", entry->d_name);
-            strcat(cwd, "/");
-            strcat(cwd, entry->d_name);
-            if (is_staged(cwd)) printf("staged\n");
-            else printf("not staged\n");
+            char help[MAX_PATH_LENGTH]; strcpy(help, cwd);
+            strcat(help, "/");
+            strcat(help, entry->d_name);
+            if (is_staged(help)) printf("(staged)\n");
+            else printf("(not staged)\n");
         }  
     }
 
@@ -307,9 +316,9 @@ int go_to_main_address()
         DIR *dir = opendir(".");
         struct dirent *entry;
         while ((entry = readdir(dir)) != NULL) {
-            if (!(entry->d_name, ".neogit")) return 0;
+            if (!strcmp(entry->d_name, ".neogit")) return 0;
         }
-        if (chmod("..") != 0) return 1;
+        if (chdir("..") != 0) return 1;
     }
 
     return 0;
