@@ -1,4 +1,4 @@
-#include <header.h>
+#include "header.h"
 
 int create_configs() 
 {
@@ -135,23 +135,41 @@ int add_to_staging(char *path)
     char cwd[MAX_PATH_LENGTH];
     getcwd(cwd, sizeof(cwd));
     go_to_main_address();
-
+    
     FILE *file = fopen(".neogit/staging", "r");
     if (file == NULL) return 1;
 
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file) != NULL) {
         int length = strlen(line);
-        if (line > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
-
-        if (!strstr(path, line)) return 0;
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        if (!strcmp(path, line)) return 0;
     }
     fclose(file);
-
+    
     file = fopen(".neogit/staging", "a");
     if (file == NULL) return 1;
 
-    fprintf(file, "%s\n", path);
+    if (is_dir(path)) {
+        
+        fprintf(file, "%s\n", path);
+        DIR *dir = opendir(path);
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            puts(entry->d_name);
+            if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+            
+            char *help = realpath(entry->d_name, NULL);
+            puts(help);
+            add_to_staging(help);
+            
+        }
+        closedir(dir);
+    } else {
+        
+        fprintf(file, "%s\n", path);
+    }
+
     fclose(file);
 
     if (chdir(cwd) != 0) return 1;
@@ -308,6 +326,15 @@ int run_reset(int argc, char * const argv[])
     if (chdir(cwd) != 0) return 1;
     
     return 0;
+}
+
+int is_dir(char *path) 
+{
+    DIR *dir = opendir(path);
+    if (dir != NULL) {
+        closedir(dir);
+        return 1;
+    } else return 0;
 }
 
 int go_to_main_address()

@@ -25,6 +25,7 @@
 
 void print_command(int argc, char * const argv[]);
 int go_to_main_address();
+int is_dir(char *path);
 
 int run_init(int argc, char * const argv[]);
 int create_configs();
