@@ -22,6 +22,7 @@
 #define MAX_MESSAGE_LENGTH 1000
 #define MAX_NAME_LENGTH 1000
 #define MAX_PATH_LENGTH 2000
+#define MAX_COMMAND_LENGTH 2000
 
 void print_command(int argc, char * const argv[]);
 int go_to_main_address();
@@ -35,10 +36,11 @@ int run_config_email(int argc, char * const argv[]);
 
 int run_add(int argc, char * const argv[]);
 int add_to_staging(char *filepath);
+int is_staged_recursive(char *path);
 int is_staged(char *path);
 void add_space(int depth, int first_depth);
 int run_add_n_recursive(int depth, int first_depth);
 int run_add_n(int argc, char * const argv[]);
 int run_add_f(int argc, char * const argv[]);
 
-int run_reset(int argc, char * const argv[]);
+// int run_reset(int argc, char * const argv[]);
