@@ -13,7 +13,7 @@ int create_configs()
     file = fopen(".neogit/configs/address", "w");
     char address[MAX_PATH_LENGTH];
     getcwd(address, sizeof(address));
-    fprintf("%s\n", address);
+    fprintf(file, "%s\n", address);
     fclose(file);
 
     file = fopen(".neogit/configs/username", "w");
@@ -151,7 +151,6 @@ int add_to_staging(char *path)
     if (file == NULL) return 1;
 
     if (is_dir(path)) {
-        
         fprintf(file, "%s\n", path);
         DIR *dir = opendir(path);
         struct dirent *entry;
@@ -160,13 +159,10 @@ int add_to_staging(char *path)
             if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
             
             char *help = realpath(entry->d_name, NULL);
-            puts(help);
             add_to_staging(help);
-            
         }
         closedir(dir);
     } else {
-        
         fprintf(file, "%s\n", path);
     }
 
