@@ -28,6 +28,9 @@ bool neogit_exists();
 void iterate(void *func(char *path));
 void write_path_to_file(char *path);
 void remove_path_from_file(char *path);
+bool is_dir(char *path);
+bool is_file(char *path);
+void go_to_main_address();
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
@@ -37,8 +40,9 @@ void run_init(int argc, char * const argv[]);
 bool is_staged(char *path);
 void add_to_staging(char *path);
 void run_add(int argc, char * const argv[]);
-bool is_dir(char *path);
-void go_to_main_address();
+void add_space(int depth, int first_depth);
+void run_add_n_recursive(int depth, int first_depth);
 
 void remove_from_staging(char *path);
 void run_reset(int argc, char * const argv[]);
+void reset_undo();
