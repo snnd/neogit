@@ -23,22 +23,19 @@
 #define MAX_NAME_LENGTH 1000
 #define MAX_PATH_LENGTH 2000
 
-void print_command(int argc, char * const argv[]);
-int go_to_main_address();
-int is_dir(char *path);
+void iterate(void *func(char *path));
+void write_path_to_file(char *path);
+void remove_path_from_file(char *path);
 
-int run_init(int argc, char * const argv[]);
-int create_configs();
+void create_configs();
+void run_config_username(int argc, char * const argv[]);
+void run_config_email(int argc, char * const argv[]);
+void run_init(int argc, char * const argv[]);
 
-int run_config_username(int argc, char * const argv[]);
-int run_config_email(int argc, char * const argv[]);
+void add_to_staging(char *path);
+void run_add(int argc, char * const argv[]);
+bool is_dir(char *path);
+void go_to_main_address();
 
-int run_add(int argc, char * const argv[]);
-int add_to_staging(char *filepath);
-int is_staged(char *path);
-void add_space(int depth, int first_depth);
-int run_add_n_recursive(int depth, int first_depth);
-int run_add_n(int argc, char * const argv[]);
-int run_add_f(int argc, char * const argv[]);
-
-int run_reset(int argc, char * const argv[]);
+void remove_from_staging(char *path);
+void run_reset(int argc, char * const argv[]);
