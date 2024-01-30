@@ -85,6 +85,18 @@ void remove_path_from_file(char *path)
     chdir(cwd);
 }
 
+void write_path_to_tracks(char *path)
+{
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    FILE *file = fopen(".neogit/tracks", "a");
+    fprintf(file, "%s\n", path);
+    fclose(file);
+    chdir(cwd);
+}
+
 void create_configs() 
 {
     FILE *file = fopen(".neogit/tracks", "w");
@@ -210,11 +222,14 @@ void add_to_staging(char *path)
 {
     if (is_staged(path)) return;
     write_path_to_file(path);
+    int flag = 0;
+    if (!is_tracked(path)) {write_path_to_tracks(path); flag = 1;}
     if (is_dir(path)) {
         char cwd[MAX_PATH_LENGTH];
         getcwd(cwd, sizeof(cwd));
         chdir(path);
         iterate(write_path_to_file);
+        if (flag) iterate(write_path_to_tracks);
         chdir(cwd);
     }
 }
@@ -366,6 +381,25 @@ bool is_staged(char *path)
 
     chdir(cwd);
 
+    return false;
+}
+
+bool is_tracked(char *path)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    FILE *file = fopen(".neogit/tracks", "r");
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+
+        if (!strcmp(path, line)) {chdir(cwd); return true;}
+    }
+
+    chdir(cwd);
     return false;
 }
 

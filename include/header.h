@@ -46,3 +46,7 @@ void run_add_n_recursive(int depth, int first_depth);
 void remove_from_staging(char *path);
 void run_reset(int argc, char * const argv[]);
 void reset_undo();
+
+void write_path_to_tracks(char *path);
+void add_to_tracks(char *path);
+bool is_tracked(char *path);
