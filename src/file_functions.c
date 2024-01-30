@@ -208,6 +208,7 @@ void run_init(int argc, char * const argv[])
 
 void add_to_staging(char *path)
 {
+    if (is_staged(path)) return;
     write_path_to_file(path);
     if (is_dir(path)) {
         char cwd[MAX_PATH_LENGTH];
@@ -236,13 +237,19 @@ void run_add(int argc, char * const argv[])
         printf("invalid command\n");
         return;
     }
-    
-    char path[MAX_PATH_LENGTH];
-    realpath(argv[2], path);
-    if (path == NULL) {
-        printf("this path doesn't exist!\n");
-    } else {
-        add_to_staging(path);
+
+    int constant;
+    if (!strcmp(argv[2], "-f")) constant = 3;
+    else constant = 2;
+
+    for (int i = 0; i < argc - constant; i++) {
+        char path[MAX_PATH_LENGTH];
+        realpath(argv[i + constant], path);
+        if (path == NULL) {
+            printf("\"%s\" doesn't exist!\n", argv[i + 2]);
+        } else {
+            add_to_staging(path);
+        }
     }
 }
 
@@ -253,16 +260,22 @@ void run_reset(int argc, char * const argv[])
         return;
     }
     
-    char path[MAX_PATH_LENGTH];
-    realpath(argv[2], path);
-    if (path == NULL) {
-        printf("this path doesn't exist!\n");
-    } else {
-        remove_from_staging(path);
+    int constant;
+    if (!strcmp(argv[2], "-f")) constant = 3;
+    else constant = 2;
+
+    for (int i = 0; i < argc - constant; i++) {
+        char path[MAX_PATH_LENGTH];
+        realpath(argv[i + constant], path);
+        if (path == NULL) {
+            printf("\"%s\" doesn't exist!\n", argv[i + constant]);
+        } else {
+            remove_from_staging(path);
+        }
     }
 }
 
-int is_staged(char *path)
+bool is_staged(char *path)
 {
     char cwd[MAX_PATH_LENGTH];
     getcwd(cwd, sizeof(cwd));
@@ -274,12 +287,12 @@ int is_staged(char *path)
         int length = strlen(line);
         if (line > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
 
-        if (!strcmp(path, line)) {chdir(cwd); return 1;}
+        if (!strcmp(path, line)) {chdir(cwd); return true;}
     }
 
     chdir(cwd);
 
-    return 0;
+    return false;
 }
 
 bool is_dir(char *path) 
@@ -307,67 +320,6 @@ void go_to_main_address()
         chdir("..");
     }
 }
-
-// int run_add(int argc, char * const argv[])
-// {
-//     if (argc < 3) {
-//         printf("invalid command\n");
-//         return 1;
-//     }
-
-//     char* path = realpath(argv[2], NULL);
-//     if(path == NULL){
-//         printf("this path doesn't exist!\n");
-//         return 1;
-//     } else {
-//         if (add_to_staging(path) != 0) return 1;
-//     }
-
-//     return 0;
-// }
-
-// int add_to_staging(char *path) 
-// {
-//     char cwd[MAX_PATH_LENGTH];
-//     getcwd(cwd, sizeof(cwd));
-//     go_to_main_address();
-    
-//     FILE *file = fopen(".neogit/staging", "r");
-//     if (file == NULL) return 1;
-
-//     char line[MAX_LINE_LENGTH];
-//     while (fgets(line, sizeof(line), file) != NULL) {
-//         int length = strlen(line);
-//         if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
-//         if (!strcmp(path, line)) return 0;
-//     }
-//     fclose(file);
-    
-//     file = fopen(".neogit/staging", "a");
-//     if (file == NULL) return 1;
-
-//     if (is_dir(path)) {
-//         fprintf(file, "%s\n", path);
-//         DIR *dir = opendir(path);
-//         struct dirent *entry;
-//         while ((entry = readdir(dir)) != NULL) {
-//             puts(entry->d_name);
-//             if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
-            
-//             char *help = realpath(entry->d_name, NULL);
-//             add_to_staging(help);
-//         }
-//         closedir(dir);
-//     } else {
-//         fprintf(file, "%s\n", path);
-//     }
-
-//     fclose(file);
-
-//     if (chdir(cwd) != 0) return 1;
-
-//     return 0;
-// }
 
 // void add_space(int depth, int first_depth)
 // {

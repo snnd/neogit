@@ -1,6 +1,6 @@
 #include <header.h>
 
-int neogit_exists()
+bool neogit_exists()
 {
     char cwd[MAX_FILENAME_LENGTH];
     getcwd(cwd, sizeof(cwd));
@@ -14,7 +14,7 @@ int neogit_exists()
         while ((entry = readdir(dir)) != NULL) {
             if (entry->d_type == DT_DIR && !strcmp(entry->d_name, ".neogit")) {
                 closedir(dir);
-                return 1;
+                return true;
             }
         }
         closedir(dir);
@@ -28,7 +28,7 @@ int neogit_exists()
 
     chdir(cwd);
 
-    return 0;
+    return false;
 }
 
 int main(int argc, char *argv[])

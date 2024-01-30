@@ -23,6 +23,8 @@
 #define MAX_NAME_LENGTH 1000
 #define MAX_PATH_LENGTH 2000
 
+bool neogit_exists();
+
 void iterate(void *func(char *path));
 void write_path_to_file(char *path);
 void remove_path_from_file(char *path);
@@ -32,6 +34,7 @@ void run_config_username(int argc, char * const argv[]);
 void run_config_email(int argc, char * const argv[]);
 void run_init(int argc, char * const argv[]);
 
+bool is_staged(char *path);
 void add_to_staging(char *path);
 void run_add(int argc, char * const argv[]);
 bool is_dir(char *path);
