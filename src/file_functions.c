@@ -1,31 +1,5 @@
 #include "header.h"
 
-// void iterate()
-// {
-//     char cwd[MAX_PATH_LENGTH];
-//     char help[MAX_PATH_LENGTH];
-
-//     DIR *dir = opendir(".");
-//     struct dirent *entry;
-//     while ((entry = readdir(dir)) != NULL) {
-//         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
-
-//         if (entry->d_type == DT_DIR) {
-//             realpath(entry->d_name, help);
-//             puts(help);
-//             getcwd(cwd, sizeof(cwd));
-//             chdir(help);
-//             iterate();
-//             chdir(cwd);
-//         } else {
-//             realpath(entry->d_name, help);
-//             puts(help);
-//         }
-//     }
-
-//     closedir(dir);
-// }
-
 void iterate(void *func(char *path))
 {
     char cwd[MAX_PATH_LENGTH];
@@ -78,10 +52,13 @@ void remove_path_from_file(char *path)
         if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
         if (strcmp(path, line)) fprintf(out, "%s\n", line);
     }
-    remove(".neogit/staging");
-    rename(".neogit/out", ".neogit/staging");
+    
     fclose(file);
     fclose(out);
+
+    remove(".neogit/staging");
+    rename(".neogit/out", ".neogit/staging");
+
     chdir(cwd);
 }
 
@@ -104,6 +81,8 @@ void create_configs()
 
     file = fopen(".neogit/staging", "w");
     fclose(file);
+
+    mkdir(".neogit/commits", 0777);
 
     mkdir(".neogit/configs", 0777);
 
@@ -213,7 +192,7 @@ void run_init(int argc, char * const argv[])
     if (exists) {
         printf("neogit repo already exists!\n");
     } else {
-        mkdir(".neogit", 0755);
+        mkdir(".neogit", 0777);
         create_configs();
     }
 }
@@ -364,6 +343,185 @@ void reset_undo()
     chdir(cwd);
 }
 
+user_info *who()
+{
+    user_info *user = malloc(sizeof(user_info));
+
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    FILE *file = fopen(".neogit/configs/username", "r");
+    int c = fgetc(file);
+    fclose(file);
+
+    if (c == EOF) {
+        chdir(cwd);
+        file = fopen("/home/sana_niroomand/project/include/configs/username", "r");
+        c = fgetc(file);
+        if (c == EOF) {
+            fclose(file);
+            return NULL;
+        } else {
+            ungetc(c, file);
+            fscanf(file, "%s\n", user->username);
+            fclose(file);
+            file = fopen("/home/sana_niroomand/project/include/configs/email", "r");
+            fscanf(file, "%s\n", user->email);
+            fclose(file);
+
+            return user;
+        }
+    } else {
+        file = fopen(".neogit/configs/username", "r");
+        fscanf(file, "%s\n", user->username);
+        fclose(file);
+        file = fopen(".neogit/configs/email", "r");
+        fscanf(file, "%s\n", user->email);
+        fclose(file);
+        chdir (cwd);
+
+        return user;
+    }
+}
+
+int commit_number()
+{
+    int result = 0;
+
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+        result++;
+    } 
+
+    return result;
+}
+
+void run_commit(int argc, char * const argv[])
+{
+    if (argc < 4 || strcmp(argv[2], "-m")) {
+        printf("invalid command\n");
+        return;
+    }
+    
+    user_info *user = who();
+    if (user == NULL) {
+        printf("please add your username and email before committing!\n");
+        return;
+    }
+
+    if (!any_staged()) {
+        printf("no staged file or directory!\n");
+        return;
+    }
+
+    if (strlen(argv[3]) > 72) {
+        printf("commit message too long!\n");
+        return;
+    }
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+
+    char number[1000];
+    sprintf(number, "%d", commit_number() + 1);
+    mkdir(number, 0777);
+    chdir(number);
+
+    FILE *file = fopen(".info", "w");
+
+    fprintf(file, "id: %s\n", number);
+
+    fprintf(file, "message: %s\n", argv[3]);
+
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    fprintf(file, "time: %s", asctime(tm));
+
+    fprintf(file, "branch: %s\n\n", current_branch());
+
+    fprintf(file, "username: %s\n", user->username);
+    fprintf(file, "email: %s\n\n", user->email);
+
+    chdir("..");
+    chdir("../..");
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    char path[MAX_PATH_LENGTH];
+    char command[MAX_COMMAND_LENGTH];
+    char cwd2[MAX_PATH_LENGTH];
+    getcwd(cwd2, sizeof(cwd2));
+    int files = 0, directories = 0;
+
+    while ((entry = readdir(dir)) != NULL) {
+        if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+        realpath(entry->d_name, path);
+        if (is_staged(path) || (is_tracked(path) && !strcmp(number, "1"))) {
+            strcpy(command, "");
+            strcat(command, "cp ");
+            if (is_dir(path)) {
+                strcat(command, "-r ");
+                directories++;
+            } else files++;
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, cwd2);
+            strcat(command, "/.neogit/commits/");
+            strcat(command, number);
+            system(command);
+        }
+        else if (is_tracked(path)) {
+            strcpy(command, "");
+            strcat(command, "cp ");
+            if (is_dir(path)) {
+                strcat(command, "-r ");
+                directories++;
+            } else files++;
+            strcat(command, cwd2);
+            strcat(command, "/.neogit/commits/");
+            int new_number = atoi(number);
+            new_number--;
+            char prev[1000];
+            sprintf(prev, "%d", new_number);
+            strcat(command, prev);
+            strcat(command, "/");
+            strcat(command, entry->d_name);
+            strcat(command, " ");
+            strcat(command, cwd2);
+            strcat(command, "/.neogit/commits/");
+            strcat(command, number);
+            system(command);
+        }
+    } 
+
+    fprintf(file, "files committed: %d\n", files);
+    fprintf(file, "directories committed: %d\n", directories);
+    fclose(file);
+
+    chdir(".neogit");
+    file = fopen("staging", "w");
+    fclose(file);
+    chdir(cwd);
+}
+
+char *current_branch()
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    FILE *file = fopen(".neogit/configs/branch", "r");
+    char *line;
+    fgets(line, sizeof(line), file);
+    int length = strlen(line);
+    if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+    chdir(cwd);
+    return line;
+}
+
 bool is_staged(char *path)
 {
     char cwd[MAX_PATH_LENGTH];
@@ -382,6 +540,20 @@ bool is_staged(char *path)
     chdir(cwd);
 
     return false;
+}
+
+bool any_staged()
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    FILE *file = fopen(".neogit/staging", "r");
+    int c = fgetc(file);
+    fclose(file);
+    chdir(cwd);
+    if (c == EOF) {
+        return false;
+    } else return true;
 }
 
 bool is_tracked(char *path)
