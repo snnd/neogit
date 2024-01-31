@@ -84,6 +84,10 @@ void create_configs()
 
     mkdir(".neogit/commits", 0777);
 
+    mkdir(".neogit/branches", 0777);
+    file = fopen(".neogit/branches/main", "w");
+    fclose(file);
+
     mkdir(".neogit/configs", 0777);
 
     file = fopen(".neogit/configs/address", "w");
@@ -364,20 +368,20 @@ user_info *who()
             return NULL;
         } else {
             ungetc(c, file);
-            fscanf(file, "%s\n", user->username);
+            fscanf(file, "%[^\n]s", user->username);
             fclose(file);
             file = fopen("/home/sana_niroomand/project/include/configs/email", "r");
-            fscanf(file, "%s\n", user->email);
+            fscanf(file, "%[^\n]s", user->email);
             fclose(file);
 
             return user;
         }
     } else {
         file = fopen(".neogit/configs/username", "r");
-        fscanf(file, "%s\n", user->username);
+        fscanf(file, "%[^\n]s", user->username);
         fclose(file);
         file = fopen(".neogit/configs/email", "r");
-        fscanf(file, "%s\n", user->email);
+        fscanf(file, "%[^\n]s", user->email);
         fclose(file);
         chdir (cwd);
 
@@ -387,6 +391,11 @@ user_info *who()
 
 int commit_number()
 {
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+
     int result = 0;
 
     DIR *dir = opendir(".");
@@ -396,6 +405,7 @@ int commit_number()
         result++;
     } 
 
+    chdir(cwd);
     return result;
 }
 
@@ -430,6 +440,8 @@ void run_commit(int argc, char * const argv[])
     char number[1000];
     sprintf(number, "%d", commit_number() + 1);
     mkdir(number, 0777);
+    char current[MAX_NAME_LENGTH]; current_branch(current);
+    add_commit_to_branch(commit_number(), current);
     chdir(number);
 
     FILE *file = fopen(".info", "w");
@@ -441,8 +453,9 @@ void run_commit(int argc, char * const argv[])
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
     fprintf(file, "time: %s", asctime(tm));
-
-    fprintf(file, "branch: %s\n", current_branch());
+    
+    fprintf(file, "branch: %s\n", current);
+    
 
     fprintf(file, "username: %s\n", user->username);
     fprintf(file, "email: %s\n", user->email);
@@ -530,27 +543,77 @@ void run_log(int argc, char * const argv[])
         chdir(number);
         file = fopen(".info", "r");
         while (fgets(line, sizeof(line), file) != NULL) {
-            printf(line);
+            printf("%s", line);
         }
-        printf("\n\n");
+        if (i != constant )printf("\n");
         fclose(file);
         chdir("..");
     }
     chdir(cwd);
 }
 
-char *current_branch()
+void run_branch(int argc, char * const argv[])
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    chdir(".neogit/branches");
+    if (argc == 2) {
+        DIR *dir = opendir(".");
+        struct dirent *entry;
+        
+        while ((entry = readdir(dir)) != NULL) {
+            if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+            printf("%s\n", entry->d_name);
+        }
+        closedir(dir);
+    } else {
+        if (branch_exists(argv[2])) {
+            printf("this branch already exists\n");
+            return;
+        }
+        FILE *file = fopen(argv[2], "w");
+        fprintf(file, "%d\n", commit_number());
+        fclose(file);
+    }
+
+    chdir(cwd);
+}
+
+void add_commit_to_branch(int commit, char *branch)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/branches");
+    FILE *file = fopen(branch, "r");
+    FILE *out = fopen("out", "w");
+    char line[MAX_LINE_LENGTH];
+    fprintf(out, "%d\n", commit);
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        fprintf(out, "%s\n", line);
+    }
+    fclose(file);
+    fclose(out);
+    remove(branch);
+    rename("out", branch);
+    chdir(cwd);
+}
+
+void current_branch(char current[])
 {
     char cwd[MAX_PATH_LENGTH];
     getcwd(cwd, sizeof(cwd));
     go_to_main_address();
     FILE *file = fopen(".neogit/configs/branch", "r");
-    char *line;
-    fgets(line, sizeof(line), file);
-    int length = strlen(line);
-    if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+    fgets(current, sizeof(current), file);
+    int length = strlen(current);
+    if (length > 0 && current[length - 1] == '\n') current[length - 1] = '\0';
+    fclose(file);
     chdir(cwd);
-    return line;
 }
 
 bool is_staged(char *path)
@@ -602,6 +665,21 @@ bool is_tracked(char *path)
         if (!strcmp(path, line)) {chdir(cwd); return true;}
     }
 
+    chdir(cwd);
+    return false;
+}
+
+bool branch_exists(char *branch)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    DIR *dir = opendir(".neogit/branches");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, branch)) {chdir(cwd); return true;}
+    }
     chdir(cwd);
     return false;
 }

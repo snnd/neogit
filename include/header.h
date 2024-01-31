@@ -40,7 +40,8 @@ void remove_path_from_file(char *path);
 bool is_dir(char *path);
 bool is_file(char *path);
 void go_to_main_address();
-char *current_branch();
+void current_branch(char current[]);
+bool branch_exists(char *branch);
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
@@ -63,5 +64,8 @@ bool is_tracked(char *path);
 
 int commit_number();
 void run_commit(int argc, char * const argv[]);
+void add_commit_to_branch(int commit, char *branch);
 
 void run_log(int argc, char * const argv[]);
+
+void run_branch(int argc, char * const argv[]);
