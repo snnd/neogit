@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "add")) run_add(argc, argv);
         else if (!strcmp(argv[1], "reset")) run_reset(argc, argv);
         else if (!strcmp(argv[1], "commit")) run_commit(argc, argv);
+        else if (!strcmp(argv[1], "log")) run_log(argc, argv);
     }
     else {
         printf("neogit hasn't been initialized\n");

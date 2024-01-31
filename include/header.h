@@ -63,3 +63,5 @@ bool is_tracked(char *path);
 
 int commit_number();
 void run_commit(int argc, char * const argv[]);
+
+void run_log(int argc, char * const argv[]);

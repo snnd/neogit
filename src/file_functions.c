@@ -442,10 +442,10 @@ void run_commit(int argc, char * const argv[])
     struct tm *tm = localtime(&t);
     fprintf(file, "time: %s", asctime(tm));
 
-    fprintf(file, "branch: %s\n\n", current_branch());
+    fprintf(file, "branch: %s\n", current_branch());
 
     fprintf(file, "username: %s\n", user->username);
-    fprintf(file, "email: %s\n\n", user->email);
+    fprintf(file, "email: %s\n", user->email);
 
     chdir("..");
     chdir("../..");
@@ -505,6 +505,37 @@ void run_commit(int argc, char * const argv[])
     chdir(".neogit");
     file = fopen("staging", "w");
     fclose(file);
+    chdir(cwd);
+}
+
+void run_log(int argc, char * const argv[])
+{
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+
+    char number[1000];
+    FILE *file;
+    char line[MAX_LINE_LENGTH];
+
+    int constant;
+    if (argc > 2 && !strcmp(argv[2], "-n")) {
+        constant = commit_number() - atoi(argv[3]) + 1;
+    } else constant = 1;
+
+    for (int i = commit_number(); i >= constant; i--) {
+        strcpy(number, "");
+        sprintf(number, "%d", i);
+        chdir(number);
+        file = fopen(".info", "r");
+        while (fgets(line, sizeof(line), file) != NULL) {
+            printf(line);
+        }
+        printf("\n\n");
+        fclose(file);
+        chdir("..");
+    }
     chdir(cwd);
 }
 
