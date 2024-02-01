@@ -42,6 +42,7 @@ bool is_file(char *path);
 void go_to_main_address();
 void current_branch(char current[]);
 bool branch_exists(char *branch);
+void number_of_files();
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
@@ -69,3 +70,5 @@ void add_commit_to_branch(int commit, char *branch);
 void run_log(int argc, char * const argv[]);
 
 void run_branch(int argc, char * const argv[]);
+
+void run_status(int argc, char * const argv[]);

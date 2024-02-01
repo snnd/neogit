@@ -1,4 +1,5 @@
 #include "header.h"
+int num_of_files = 0;
 
 void iterate(void *func(char *path))
 {
@@ -279,12 +280,10 @@ void run_add_n_recursive(int depth, int first_depth)
         if (entry->d_type == DT_DIR) {
             add_space(depth, first_depth);
             printf(CYN);
-            printf("%s ", entry->d_name);
+            printf("%s\n", entry->d_name);
             char help[MAX_PATH_LENGTH]; strcpy(help, cwd);
             strcat(help, "/");
             strcat(help, entry->d_name);
-            if (is_staged(help)) printf("(staged)\n");
-            else printf("(not staged)\n");
             printf(RESET);
             chdir(entry->d_name);
             run_add_n_recursive(depth - 1, first_depth);
@@ -342,6 +341,7 @@ void reset_undo()
     int length = strlen(prev);
     if (length > 0 && prev[length - 1] == '\n') prev[length - 1] = '\0';
     remove_from_staging(prev);
+    if (is_dir(prev)) reset_undo();
 
     fclose(file);
     chdir(cwd);
@@ -476,10 +476,10 @@ void run_commit(int argc, char * const argv[])
         if (is_staged(path) || (is_tracked(path) && !strcmp(number, "1"))) {
             strcpy(command, "");
             strcat(command, "cp ");
-            if (is_dir(path)) {
-                strcat(command, "-r ");
-                directories++;
-            } else files++;
+            if (is_dir(path)) strcat(command, "-r ");
+            chdir(path);
+            number_of_files();
+            chdir(cwd2);
             strcat(command, path);
             strcat(command, " ");
             strcat(command, cwd2);
@@ -490,10 +490,8 @@ void run_commit(int argc, char * const argv[])
         else if (is_tracked(path)) {
             strcpy(command, "");
             strcat(command, "cp ");
-            if (is_dir(path)) {
-                strcat(command, "-r ");
-                directories++;
-            } else files++;
+            if (is_dir(path)) strcat(command, "-r ");
+            num_of_files++;
             strcat(command, cwd2);
             strcat(command, "/.neogit/commits/");
             int new_number = atoi(number);
@@ -511,8 +509,8 @@ void run_commit(int argc, char * const argv[])
         }
     } 
 
-    fprintf(file, "files committed: %d\n", files);
-    fprintf(file, "directories committed: %d\n", directories);
+    fprintf(file, "files committed: %d\n", num_of_files);
+    num_of_files = 0;
     fclose(file);
 
     chdir(".neogit");
@@ -601,6 +599,36 @@ void add_commit_to_branch(int commit, char *branch)
     remove(branch);
     rename("out", branch);
     chdir(cwd);
+}
+
+void run_status(int argc, char * const argv[])
+{
+    
+}
+
+void number_of_files()
+{
+    char cwd[MAX_PATH_LENGTH];
+    char help[MAX_PATH_LENGTH];
+    
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+
+        if (entry->d_type == DT_DIR) {
+            realpath(entry->d_name, help);
+            getcwd(cwd, sizeof(cwd));
+            chdir(help);
+            number_of_files();
+            chdir(cwd);
+        } else {
+            realpath(entry->d_name, help);
+            num_of_files++;
+        }
+    }
+
+    closedir(dir);
 }
 
 void current_branch(char current[])

@@ -53,6 +53,13 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "commit")) run_commit(argc, argv);
         else if (!strcmp(argv[1], "log")) run_log(argc, argv);
         else if (!strcmp(argv[1], "branch")) run_branch(argc, argv);
+        else if (!strcmp(argv[1], "cwd")) {
+            char cwd[MAX_PATH_LENGTH];
+            chdir("/home/sana_niroomand/test/lolo/rosa");
+            getcwd(cwd, sizeof(cwd));
+            puts(cwd);
+        }
+        else if (!strcmp(argv[1], "status")) run_status(argc, argv);
     }
     else {
         printf("neogit hasn't been initialized\n");
