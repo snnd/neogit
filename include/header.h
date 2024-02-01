@@ -26,6 +26,7 @@
 #define MAX_NAME_LENGTH 1000
 #define MAX_PATH_LENGTH 2000
 #define MAX_COMMAND_LENGTH 4000
+#define MAX_HASH_CODE 4000
 
 typedef struct {
     char username[MAX_NAME_LENGTH];
@@ -72,3 +73,8 @@ void run_log(int argc, char * const argv[]);
 void run_branch(int argc, char * const argv[]);
 
 void run_status(int argc, char * const argv[]);
+void add_to_last_state(char command[]);
+bool is_in_last_state(char *filename);
+bool is_in_working_directory(char *path, char *filename);
+void calculate_hash(char *filename, char hash[]);
+void calculate_hash_in_last_state(char *filename, char hash[]);

@@ -84,6 +84,8 @@ void create_configs()
     fclose(file);
 
     mkdir(".neogit/commits", 0777);
+    
+    mkdir(".neogit/last_state", 0777);
 
     mkdir(".neogit/branches", 0777);
     file = fopen(".neogit/branches/main", "w");
@@ -409,6 +411,42 @@ int commit_number()
     return result;
 }
 
+void add_to_last_state(char command[])
+{
+    char help[MAX_COMMAND_LENGTH];
+    strcpy(help, command);
+    strcat(help, "/.neogit/last_state");
+    system(help);
+}
+
+bool is_in_last_state(char *filename) 
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    DIR *dir = opendir(".neogit/last_state");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, filename)) {chdir(cwd); return true;}
+    }
+    chdir(cwd);
+    return false;
+}
+
+bool is_in_working_directory(char *path, char *filename)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    chdir(path);
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, filename)) {chdir(cwd); return true;}
+    }
+    chdir(cwd);
+    return false;
+}
+
 void run_commit(int argc, char * const argv[])
 {
     if (argc < 4 || strcmp(argv[2], "-m")) {
@@ -483,6 +521,7 @@ void run_commit(int argc, char * const argv[])
             strcat(command, path);
             strcat(command, " ");
             strcat(command, cwd2);
+            add_to_last_state(command);
             strcat(command, "/.neogit/commits/");
             strcat(command, number);
             system(command);
@@ -503,9 +542,19 @@ void run_commit(int argc, char * const argv[])
             strcat(command, entry->d_name);
             strcat(command, " ");
             strcat(command, cwd2);
+            add_to_last_state(command);
             strcat(command, "/.neogit/commits/");
             strcat(command, number);
             system(command);
+        }
+        else {
+            strcpy(command, "");
+            strcat(command, "cp ");
+            if (is_dir(path)) strcat(command, "-r ");
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, cwd2);
+            add_to_last_state(command);
         }
     } 
 
@@ -601,9 +650,74 @@ void add_commit_to_branch(int commit, char *branch)
     chdir(cwd);
 }
 
+void calculate_hash(char *filename, char hash[])
+{
+    char cmd[MAX_COMMAND_LENGTH] = "md5sum ";    
+    strcat(cmd, filename);
+
+    char buf[MAX_HASH_CODE] = {0};
+    FILE *fp;
+
+    fp = popen(cmd, "r");
+
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        sscanf(buf, "%s", hash);
+    }
+
+    pclose(fp);
+}
+
+void calculate_hash_in_last_state(char *filename, char hash[]) 
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    DIR *dir = opendir(".neogit/last_state");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, filename)) {
+            calculate_hash(filename, hash);
+        }
+    }
+    chdir(cwd);
+}
+
 void run_status(int argc, char * const argv[])
 {
-    
+    char help[MAX_PATH_LENGTH];
+    char path[MAX_PATH_LENGTH];
+    char new_hash[MAX_HASH_CODE];
+    char old_hash[MAX_HASH_CODE];
+    getcwd(path, sizeof(path));
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            realpath(entry->d_name, help);
+            printf("%s ", entry->d_name);
+            if (is_staged(help)) printf("+");
+            else printf("-");
+            if (!is_in_last_state(entry->d_name)) {printf("A\n");}
+            calculate_hash(entry->d_name, new_hash);
+            calculate_hash_in_last_state(entry->d_name, old_hash);
+            if (strcmp(new_hash, old_hash)) {printf("M\n");}
+        }
+    }
+
+    closedir(dir);
+
+    go_to_main_address();
+    dir = opendir(".neogit/last_state");
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_REG) {
+            realpath(entry->d_name, help);
+            if (!is_in_working_directory(path, entry->d_name)) {printf("D\n"); return;}
+        }
+    }
+    chdir(path);
+    closedir(dir);
+
+    printf("0\n");
 }
 
 void number_of_files()
@@ -747,3 +861,5 @@ void go_to_main_address()
         chdir("..");
     }
 }
+
+// using realpath (with "" given to it) or maybe opendir to fix the problem with getcwd
