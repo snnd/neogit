@@ -76,5 +76,10 @@ void run_status(int argc, char * const argv[]);
 void add_to_last_state(char command[]);
 bool is_in_last_state(char *filename);
 bool is_in_working_directory(char *path, char *filename);
-void calculate_hash(char filename[], char hash[]);
-void calculate_hash_in_last_state(char filename[], char hash[]);
+void calculate_hash(char *filename, char hash[]);
+void calculate_hash_in_last_state(char *filename, char hash[]);
+bool is_deleted(char *path, char *filename);
+
+void checkout_branch(char *branch);
+void checkout_commit(char *number);
+void run_checkout(int argc, char * const argv[]);
