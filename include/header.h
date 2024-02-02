@@ -43,7 +43,7 @@ bool is_file(char *path);
 void go_to_main_address();
 void current_branch(char current[]);
 bool branch_exists(char *branch);
-void number_of_files();
+void number_of_files(char *path, int *result);
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);

@@ -593,10 +593,18 @@ void run_branch(int argc, char * const argv[])
     if (argc == 2) {
         DIR *dir = opendir(".");
         struct dirent *entry;
-        
+        char current[MAX_NAME_LENGTH];
+        current_branch(current);
+
         while ((entry = readdir(dir)) != NULL) {
             if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
-            printf("%s\n", entry->d_name);
+            if (!strcmp(current, entry->d_name)) {
+                printf(RED);
+                printf("*");
+                printf(RESET);
+                printf("%s\n", entry->d_name);
+            }
+            else printf("%s\n", entry->d_name);
         }
         closedir(dir);
     } else {
@@ -693,7 +701,7 @@ void run_commit(int argc, char * const argv[])
     char command[MAX_COMMAND_LENGTH];
     char cwd2[MAX_PATH_LENGTH];
     getcwd(cwd2, sizeof(cwd2));
-    int files = 0, directories = 0;
+    int files = 0;
 
     while ((entry = readdir(dir)) != NULL) {
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
@@ -701,10 +709,10 @@ void run_commit(int argc, char * const argv[])
         if (is_staged(path) || (is_tracked(path) && !strcmp(number, "1"))) {
             strcpy(command, "");
             strcat(command, "cp ");
-            if (is_dir(path)) strcat(command, "-r ");
-            chdir(path);
-            number_of_files();
-            chdir(cwd2);
+            if (is_dir(path)) {
+                strcat(command, "-r ");
+                number_of_files(path, &files);
+            } else files++;
             strcat(command, path);
             strcat(command, " ");
             strcat(command, cwd2);
@@ -716,8 +724,10 @@ void run_commit(int argc, char * const argv[])
         else if (is_tracked(path)) {
             strcpy(command, "");
             strcat(command, "cp ");
-            if (is_dir(path)) strcat(command, "-r ");
-            num_of_files++;
+            if (is_dir(path)) {
+                strcat(command, "-r ");
+                number_of_files(path, &files);
+            } else files++;
             strcat(command, cwd2);
             strcat(command, "/.neogit/commits/");
             int new_number = atoi(number);
@@ -745,8 +755,7 @@ void run_commit(int argc, char * const argv[])
         }
     } 
 
-    fprintf(file, "files committed: %d\n", num_of_files);
-    num_of_files = 0;
+    fprintf(file, "files committed: %d\n", files);
     fclose(file);
 
     chdir(".neogit");
@@ -912,7 +921,6 @@ void checkout_commit(char *number)
         strcat(command, help);
         strcat(command, " ");
         strcat(command, main);
-        puts(command);
         system(command);
     }
     closedir(dir);
@@ -949,30 +957,31 @@ void run_checkout(int argc, char * const argv[])
         checkout_commit(argv[2]);
     }
 }
-int num_of_files = 0;
-void number_of_files()
+
+void number_of_files(char *path, int *files)
 {
     char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
     char help[MAX_PATH_LENGTH];
-    
+    chdir(path);
     DIR *dir = opendir(".");
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
 
         if (entry->d_type == DT_DIR) {
+            memset(help, 0, sizeof(help));
             realpath(entry->d_name, help);
-            getcwd(cwd, sizeof(cwd));
-            chdir(help);
-            number_of_files();
-            chdir(cwd);
+            number_of_files(help, files);
         } else {
+            memset(help, 0, sizeof(help));
             realpath(entry->d_name, help);
-            num_of_files++;
+            (*files)++;
         }
     }
 
     closedir(dir);
+    chdir(cwd);
 }
 
 void current_branch(char current[])
@@ -986,70 +995,6 @@ void current_branch(char current[])
     if (length > 0 && current[length - 1] == '\n') current[length - 1] = '\0';
     fclose(file);
     chdir(cwd);
-}
-
-bool neogit_exists()
-{
-    char cwd[MAX_FILENAME_LENGTH];
-    getcwd(cwd, sizeof(cwd));
-    
-    bool exists = false;
-    char tmp_dir[MAX_FILENAME_LENGTH];
-    struct dirent *entry;
-    do {
-        DIR *dir = opendir(".");
-
-        while ((entry = readdir(dir)) != NULL) {
-            if (entry->d_type == DT_DIR && !strcmp(entry->d_name, ".neogit")) {
-                closedir(dir);
-                chdir(cwd);
-                return true;
-            }
-        }
-        closedir(dir);
-        
-        getcwd(tmp_dir, sizeof(tmp_dir));
-        if (strcmp(tmp_dir, "/")) {
-            chdir("..");
-        }
-
-    } while (strcmp(tmp_dir, "/"));
-
-    chdir(cwd);
-
-    return false;
-}
-
-int main(int argc, char *argv[])
-{
-    if (argc < 2) {
-        printf("please enter a valid command\n");
-        return 1;
-    }
-
-    if (!strcmp(argv[1], "init")) run_init(argc, argv);
-    else if (neogit_exists()) {
-        if (!strcmp(argv[1], "config")) {
-            if (argc < 4) {
-                printf("please enter a valid command\n");
-                return 1;
-            }
-            if (!strcmp(argv[2], "user.name") || !strcmp(argv[3], "user.name")) run_config_username(argc, argv);
-            else if (!strcmp(argv[2], "user.email") || !strcmp(argv[3], "user.email")) run_config_email(argc, argv);
-        }
-        else if (!strcmp(argv[1], "add")) run_add(argc, argv);
-        else if (!strcmp(argv[1], "reset")) run_reset(argc, argv);
-        else if (!strcmp(argv[1], "commit")) run_commit(argc, argv);
-        else if (!strcmp(argv[1], "log")) run_log(argc, argv);
-        else if (!strcmp(argv[1], "branch")) run_branch(argc, argv);
-        else if (!strcmp(argv[1], "status")) run_status(argc, argv);
-        else if (!strcmp(argv[1], "checkout")) run_checkout(argc, argv);
-    }
-    else {
-        printf("neogit hasn't been initialized\n");
-    }
-
-    return 0;
 }
 
 bool neogit_exists()
