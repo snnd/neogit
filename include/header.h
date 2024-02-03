@@ -43,6 +43,7 @@ bool is_file(char *path);
 void go_to_main_address();
 void current_branch(char current[]);
 bool branch_exists(char *branch);
+bool tag_exists(char *tag);
 void number_of_files(char *path, int *result);
 
 void create_configs();
@@ -85,3 +86,5 @@ void checkout_commit(char *number);
 void run_checkout(int argc, char * const argv[]);
 
 void run_revert(int argc, char * const argv[]);
+
+void run_tag(int argc, char * const argv[]);

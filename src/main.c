@@ -90,6 +90,8 @@ void create_configs()
     file = fopen(".neogit/branches/main", "w");
     fclose(file);
 
+    mkdir(".neogit/tags", 0777);
+
     mkdir(".neogit/configs", 0777);
 
     file = fopen(".neogit/configs/address", "w");
@@ -476,6 +478,21 @@ bool branch_exists(char *branch)
     }
     chdir(cwd);
     return false;
+}
+
+bool tag_exists(char *tag)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/tags");
+    DIR *dir = opendir(".");
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, tag)) {chdir(cwd); return true;}
+    }
+    chdir(cwd);
+    return false; 
 }
 
 bool is_dir(char *path) 
@@ -1011,6 +1028,65 @@ void run_revert(int argc, char * const argv[])
     chdir(cwd);
 }
 
+void run_tag(int argc, char * const argv[])
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/tags");
+    
+    if (argc == 2) {
+        struct dirent **namelist;
+        int n = scandir(".", &namelist, 0, alphasort);
+        for (int i = 0; i < n; i++) {
+            if ((namelist[i]->d_name)[0] == '.' || !strcmp(namelist[i]->d_name, "sana_niroomand")) {
+                free(namelist[i]);
+                continue;
+            }
+            printf("%s\n", namelist[i]->d_name);
+            free(namelist[i]);
+        }
+        free(namelist);
+    }
+    else if (!strcmp(argv[2], "show")) {
+        FILE *file = fopen(argv[3], "r");
+        char line[MAX_LINE_LENGTH];
+        while (fgets(line, sizeof(line), file) != NULL) {
+            printf("%s", line);
+        }
+        fclose(file);
+    }
+    else if (!strcmp(argv[2], "-a")) {
+
+        user_info *user = who();
+        if (user == NULL) {
+            printf("please add your username and email before committing!\n");
+            return;
+        }
+
+        if (strcmp(argv[argc - 1], "-f")) {
+            if (tag_exists(argv[3])) {printf("this tag already exists!\n"); return;}
+        } else {
+            if (tag_exists(argv[3])) remove(argv[3]);
+        }
+
+        FILE *file = fopen(argv[3], "w");
+        fprintf(file, "name: %s\n", argv[3]);
+        if (argc > 5 && !strcmp(argv[4], "-c")) fprintf(file, "commit id: %s\n", argv[5]);
+        else if (argc > 7 && !strcmp(argv[6], "-c")) fprintf(file, "commit id: %s\n", argv[7]);
+        else fprintf(file, "commit id: %d\n", commit_number());
+        fprintf(file, "author: %s %s\n", user->username, user->email);
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        fprintf(file, "time: %s", asctime(tm));
+        if (argc > 5 && !strcmp(argv[4], "-m")) fprintf(file, "message: %s\n", argv[5]);
+        else fprintf(file, "message: \n");
+        fclose(file);
+    }
+
+    chdir(cwd);
+}
+
 void number_of_files(char *path, int *files)
 {
     char cwd[MAX_PATH_LENGTH];
@@ -1107,6 +1183,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "status")) run_status(argc, argv);
         else if (!strcmp(argv[1], "checkout")) run_checkout(argc, argv);
         else if (!strcmp(argv[1], "revert")) run_revert(argc, argv);
+        else if (!strcmp(argv[1], "tag")) run_tag(argc, argv);
     }
     else {
         printf("neogit hasn't been initialized\n");
