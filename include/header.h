@@ -83,3 +83,5 @@ bool is_deleted(char *path, char *filename);
 void checkout_branch(char *branch);
 void checkout_commit(char *number);
 void run_checkout(int argc, char * const argv[]);
+
+void run_revert(int argc, char * const argv[]);

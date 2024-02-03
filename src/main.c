@@ -958,6 +958,59 @@ void run_checkout(int argc, char * const argv[])
     }
 }
 
+void run_revert(int argc, char * const argv[])
+{
+    if (argc < 3) {
+        printf("invalid command\n");
+        return;
+    }
+
+    bool flag_e = false;
+
+    char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
+    strcat(command, argv[argc - 1]);
+    system(command);
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+    strcpy(command, "cp -r ");
+    strcat(command, argv[argc - 1]);
+    strcat(command, " ");
+    char dest[1000];
+    sprintf(dest, "%d", commit_number() + 1);
+    strcat(command, dest);
+    system(command);
+    chdir(dest);
+    FILE *file = fopen(".info", "r");
+    FILE *out = fopen(".out", "w");
+    char line[MAX_LINE_LENGTH];
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        if (strstr(line, "id: ")) fprintf(out, "id: %d\n", commit_number());
+        else if (strstr(line, "time: ")) {
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            fprintf(out, "time: %s", asctime(tm));
+        }
+        else if (strstr(line, "message: ") && flag_e) {
+            char new_message[MAX_MESSAGE_LENGTH];
+            puts("enter the new message please:");
+            fgets(new_message, sizeof(new_message), stdin);
+            length = strlen(new_message);
+            if (length > 0 && new_message[length - 1] == '\n') new_message[length - 1] = '\0';
+            fprintf(out, "message: %s\n", new_message);
+        }
+        else fprintf(out, "%s\n", line);
+    }
+    fclose(file);
+    fclose(out);
+    remove(".info");
+    rename(".out", ".info");
+    chdir(cwd);
+}
+
 void number_of_files(char *path, int *files)
 {
     char cwd[MAX_PATH_LENGTH];
@@ -1053,6 +1106,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "branch")) run_branch(argc, argv);
         else if (!strcmp(argv[1], "status")) run_status(argc, argv);
         else if (!strcmp(argv[1], "checkout")) run_checkout(argc, argv);
+        else if (!strcmp(argv[1], "revert")) run_revert(argc, argv);
     }
     else {
         printf("neogit hasn't been initialized\n");
