@@ -1087,6 +1087,132 @@ void run_tag(int argc, char * const argv[])
     chdir(cwd);
 }
 
+void trail(char line[])
+{
+    int index = strlen(line) - 1;
+    if (isspace(line[index])) line[index--] = '\0';
+}
+
+void run_diff(int argc, char * const argv[])
+{
+    if (argc < 5) {
+        printf("invalid command\n");
+        return;
+    }
+
+    if (!strcmp(argv[2], "-f")) {
+        char line1[MAX_LINE_LENGTH], line2[MAX_LINE_LENGTH];
+        FILE *file1 = fopen(argv[3], "r");
+        FILE *file2 = fopen(argv[4], "r");
+        int n1 = 0, n2 = 0;
+        int start1 = 0, start2 = 0;
+        int end1 = 0, end2 = 0;
+
+        if (argc == 7) {
+            if (!strcmp(argv[5], "-line1")) {
+                sscanf(argv[6], "%d-%d", &start1, &end1);
+                while (n1 < start1 - 1) {
+                    fgets(line1, sizeof(line1), file1);
+                    n1++;
+                }
+            } else if (!strcmp(argv[5], "-line2")) {
+                sscanf(argv[6], "%d-%d", &start2, &end2);
+                while (n2 < start2 - 1) {
+                    fgets(line2, sizeof(line2), file2);
+                    n2++;
+                }
+            }
+        } else if (argc == 9) {
+            sscanf(argv[6], "%d-%d", &start1, &end1);
+            sscanf(argv[8], "%d-%d", &start2, &end2);
+            while (n1 < start1 - 1) {
+                fgets(line1, sizeof(line1), file1);
+                n1++;
+            }
+            while (n2 < start2 - 1) {
+                fgets(line2, sizeof(line2), file2);
+                n2++;
+            }
+        }
+
+        while ((fgets(line1, sizeof(line1), file1) != NULL) && (fgets(line2, sizeof(line2), file2) != NULL)) {
+            n1++; n2++;
+            trail(line1); trail(line2);
+            while (strlen(line1) == 0) {
+                if (fgets(line1, sizeof(line1), file1) == NULL) break;
+                trail(line1);
+                n1++;
+            }
+            while (strlen(line2) == 0) {
+                if (fgets(line2, sizeof(line2), file2) == NULL) break;
+                trail(line2);
+                n2++;
+            }
+            trail(line1); trail(line2);
+
+            if (strcmp(line1, line2)) {
+                printf("«««««\n");
+                printf("%s-%d\n", argv[3], n1);
+                printf(MAG);
+                printf("%s\n", line1);
+                printf(RESET);
+                printf("%s-%d\n", argv[4], n2);
+                printf(CYN);
+                printf("%s\n", line2);
+                printf(RESET);
+                printf("»»»»»\n");
+            }
+
+            if (n1 == end1 || n2 == end2) break;
+        }
+        fclose(file1); fclose(file2);
+    }
+
+    else if (!strcmp(argv[2], "-c")) {
+        char cwd[MAX_PATH_LENGTH];
+        getcwd(cwd, sizeof(cwd));
+        go_to_main_address();
+        chdir(".neogit/commits");
+        struct dirent *entry1;
+        struct dirent *entry2;
+        int flag;
+        DIR *dir1 = opendir(argv[3]);
+        while ((entry1 = readdir(dir1)) != NULL) {
+            if ((entry1->d_name)[0] == '.' || !strcmp(entry1->d_name, "sana_niroomand") || entry1->d_type != DT_REG) continue;
+            flag = 0;
+            DIR *dir2 = opendir(argv[4]);
+            while ((entry2 = readdir(dir2)) != NULL) {
+                if (!strcmp(entry1->d_name, entry2->d_name) && entry2->d_type == DT_REG) {flag = 1; break;}
+            }
+            closedir(dir2);
+            if (!flag) {
+                printf(MAG);
+                puts(entry1->d_name);
+                printf(RESET);
+            }
+        }
+        closedir(dir1);
+
+        DIR *dir2 = opendir(argv[4]);
+        while ((entry2 = readdir(dir2)) != NULL) {
+            if ((entry2->d_name)[0] == '.' || !strcmp(entry2->d_name, "sana_niroomand") || entry2->d_type != DT_REG) continue;
+            flag = 0;
+            dir1 = opendir(argv[3]);
+            while ((entry1 = readdir(dir1)) != NULL) {
+                if (!strcmp(entry1->d_name, entry2->d_name) && entry1->d_type == DT_REG) {flag = 1; break;}
+            }
+            closedir(dir1);
+            if (!flag) {
+                printf(CYN);
+                puts(entry2->d_name);
+                printf(RESET);
+            }
+        }
+        closedir(dir2);
+        chdir(cwd);
+    }
+}
+
 void number_of_files(char *path, int *files)
 {
     char cwd[MAX_PATH_LENGTH];
@@ -1184,6 +1310,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "checkout")) run_checkout(argc, argv);
         else if (!strcmp(argv[1], "revert")) run_revert(argc, argv);
         else if (!strcmp(argv[1], "tag")) run_tag(argc, argv);
+        else if (!strcmp(argv[1], "diff")) run_diff(argc, argv);
     }
     else {
         printf("neogit hasn't been initialized\n");

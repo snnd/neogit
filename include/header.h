@@ -88,3 +88,6 @@ void run_checkout(int argc, char * const argv[]);
 void run_revert(int argc, char * const argv[]);
 
 void run_tag(int argc, char * const argv[]);
+
+void run_diff(int argc, char * const argv[]);
+void trail(char line[]);
