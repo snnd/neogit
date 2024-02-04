@@ -91,3 +91,4 @@ void run_tag(int argc, char * const argv[]);
 
 void run_diff(int argc, char * const argv[]);
 void trail(char line[]);
+void diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);

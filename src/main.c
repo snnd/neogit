@@ -1093,6 +1093,53 @@ void trail(char line[])
     if (isspace(line[index])) line[index--] = '\0';
 }
 
+void diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[])
+{
+    char filepath[MAX_PATH_LENGTH];
+    realpath(argv[3], filepath);
+    strcat(filepath, "/");
+    strcat(filepath, entry1->d_name);
+    FILE *file1 = fopen(filepath, "r");
+    realpath(argv[4], filepath);
+    strcat(filepath, "/");
+    strcat(filepath, entry2->d_name);
+    FILE *file2 = fopen(filepath, "r");
+
+    char line1[MAX_LINE_LENGTH], line2[MAX_LINE_LENGTH];
+    int n1 = 0, n2 = 0;
+
+    while ((fgets(line1, sizeof(line1), file1) != NULL) && (fgets(line2, sizeof(line2), file2) != NULL)) {
+        n1++; n2++;
+        trail(line1); trail(line2);
+        while (strlen(line1) == 0) {
+            if (fgets(line1, sizeof(line1), file1) == NULL) break;
+            trail(line1);
+            n1++;
+        }
+        while (strlen(line2) == 0) {
+            if (fgets(line2, sizeof(line2), file2) == NULL) break;
+            trail(line2);
+            n2++;
+        }
+        trail(line1); trail(line2);
+
+        if (strcmp(line1, line2)) {
+            printf("«««««\n");
+            printf("%s-%d\n", argv[3], n1);
+            printf(MAG);
+            printf("%s\n", line1);
+            printf(RESET);
+            printf("%s-%d\n", argv[4], n2);
+            printf(CYN);
+            printf("%s\n", line2);
+            printf(RESET);
+            printf("»»»»»\n");
+        }
+    }
+
+    fclose(file1); fclose(file2);
+}
+
 void run_diff(int argc, char * const argv[])
 {
     if (argc < 5) {
@@ -1189,7 +1236,7 @@ void run_diff(int argc, char * const argv[])
                 printf(MAG);
                 puts(entry1->d_name);
                 printf(RESET);
-            }
+            } else diff_files(entry1, entry2, argv);
         }
         closedir(dir1);
 
