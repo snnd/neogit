@@ -91,4 +91,8 @@ void run_tag(int argc, char * const argv[]);
 
 void run_diff(int argc, char * const argv[]);
 void trail(char line[]);
-void diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);
+bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);
+
+void run_merge(int argc, char * const argv[]);
+void branch_head(char *branch, char commit[]);
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[]);
