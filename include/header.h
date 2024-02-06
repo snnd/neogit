@@ -45,11 +45,14 @@ void current_branch(char current[]);
 bool branch_exists(char *branch);
 bool tag_exists(char *tag);
 void number_of_files(char *path, int *result);
+bool is_alias(int argc, char * const argv[]);
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
 void run_config_email(int argc, char * const argv[]);
 void run_init(int argc, char * const argv[]);
+void run_config_alias(int argc, char * const argv[]);
+bool check_command(char command[]);
 
 bool is_staged(char *path);
 bool any_staged();

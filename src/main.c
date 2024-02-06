@@ -106,6 +106,9 @@ void create_configs()
     file = fopen(".neogit/configs/email", "w");
     fclose(file); 
 
+    file = fopen(".neogit/configs/alias", "w");
+    fclose(file); 
+
     file = fopen(".neogit/configs/branch", "w");
     fprintf(file, "main\n");
     fclose(file);    
@@ -158,6 +161,107 @@ void run_config_email(int argc, char * const argv[])
     }
     else if (strcmp(argv[2], "--global") && argc == 4) {
         FILE *file = fopen(".neogit/configs/email", "w");
+        fprintf(file, "%s\n", argv[3]);
+        fclose(file);
+    }
+    else {
+        printf("invalid command\n");
+    }
+
+    chdir(cwd);
+}
+
+bool check_command(char copy_command[])
+{
+    int argc = 0;
+    char *argv[MAX_COMMAND_LENGTH];
+    char command[MAX_COMMAND_LENGTH];
+    strcpy(command, copy_command);
+    argv[argc++] = strtok(command, " ");
+    while ((argv[argc] = strtok(NULL, " ")) != NULL) argc++;
+
+    if (argc < 2) {
+        printf("please enter a valid command\n");
+        return false;
+    }
+    if (!strcmp(argv[1], "config")) {
+        if (argc < 4) {
+            printf("please enter a valid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "add")) {
+        if (argc < 3) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "reset")) {
+        if (argc < 3) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "commit")) {
+        if (argc < 4 || strcmp(argv[2], "-m")) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "checkout")) {
+        if (argc < 3) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "revert")) {
+        if (argc < 3) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "diff")) {
+        if (argc < 5) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+    else if (!strcmp(argv[1], "merge")) {
+        if (argc < 5) {
+            printf("invalid command\n");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void run_config_alias(int argc, char * const argv[])
+{
+    if (argc < 4) {
+        printf("invalid command\n");
+        return;
+    }
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    if (!strcmp(argv[2], "--global") && argc == 5) {
+        if (!check_command(argv[2])) return;
+        FILE *file = fopen("/home/sana_niroomand/project/include/configs/alias", "a");
+        strtok(argv[3], ".");
+        strcpy(argv[3], strtok(NULL, "."));
+        fprintf(file, "neogit %s\n", argv[3]);
+        fprintf(file, "%s\n", argv[4]);
+        fclose(file);
+    }
+    else if (strcmp(argv[2], "--global") && argc == 4) {
+        if (!check_command(argv[3])) return;
+        FILE *file = fopen(".neogit/configs/alias", "a");
+        strtok(argv[2], ".");
+        strcpy(argv[2], strtok(NULL, "."));
+        fprintf(file, "neogit %s\n", argv[2]);
         fprintf(file, "%s\n", argv[3]);
         fclose(file);
     }
@@ -1521,6 +1625,73 @@ bool neogit_exists()
     return false;
 }
 
+bool is_alias(int argc, char * const argv[])
+{
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    char line[MAX_LINE_LENGTH];
+    char command[MAX_COMMAND_LENGTH] = "";
+    for (int i = 0; i < argc; i++) {
+        strcat(command, argv[i]);
+        if (i < argc - 1) strcat(command, " ");
+    }
+    int n;
+
+    FILE *file = fopen(".neogit/configs/alias", "r");
+    int c = fgetc(file);
+    fclose(file);
+
+    if (c == EOF) {
+        chdir(cwd);
+        file = fopen("/home/sana_niroomand/project/include/configs/alias", "r");
+        c = fgetc(file);
+        if (c == EOF) {
+            fclose(file);
+            return false;
+        } else {
+            ungetc(c, file);
+            n = 0;
+            while (fgets(line, sizeof(line), file) != NULL) {
+                int length = strlen(line);
+                if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+                n++;
+                if (n % 2 == 0) continue;
+                if (!strcmp(command, line)) {
+                    fgets(line, sizeof(line), file);
+                    length = strlen(line);
+                    if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+                    system(line); 
+                    return true;
+                }
+            }
+            fclose(file);
+        }
+    } else {
+        file = fopen(".neogit/configs/alias", "r");
+        n = 0;
+        while (fgets(line, sizeof(line), file) != NULL) {
+            int length = strlen(line);
+            if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+            n++;
+            if (n % 2 == 0) continue;
+            if (!strcmp(command, line)) {
+                chdir(cwd); 
+                fgets(line, sizeof(line), file);
+                length = strlen(line);
+                if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+                system(line); 
+                return true;
+            }
+        }
+        fclose(file);
+        chdir(cwd);
+    }
+
+    return false;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -1537,6 +1708,7 @@ int main(int argc, char *argv[])
             }
             if (!strcmp(argv[2], "user.name") || !strcmp(argv[3], "user.name")) run_config_username(argc, argv);
             else if (!strcmp(argv[2], "user.email") || !strcmp(argv[3], "user.email")) run_config_email(argc, argv);
+            else if (strstr(argv[2], "alias.") || strstr(argv[3], "alias.")) run_config_alias(argc, argv);
         }
         else if (!strcmp(argv[1], "add")) run_add(argc, argv);
         else if (!strcmp(argv[1], "reset")) run_reset(argc, argv);
@@ -1549,6 +1721,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "tag")) run_tag(argc, argv);
         else if (!strcmp(argv[1], "diff")) run_diff(argc, argv);
         else if (!strcmp(argv[1], "merge")) run_merge(argc, argv);
+        else if (!is_alias(argc, argv)) printf("please enter a valid command\n");
     }
     else {
         printf("neogit hasn't been initialized\n");
