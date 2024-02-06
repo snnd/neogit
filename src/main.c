@@ -109,6 +109,9 @@ void create_configs()
     file = fopen(".neogit/configs/alias", "w");
     fclose(file); 
 
+    file = fopen(".neogit/configs/shortcuts", "w");
+    fclose(file); 
+
     file = fopen(".neogit/configs/branch", "w");
     fprintf(file, "main\n");
     fclose(file);    
@@ -269,6 +272,161 @@ void run_config_alias(int argc, char * const argv[])
         printf("invalid command\n");
     }
 
+    chdir(cwd);
+}
+
+bool shortcut_exists(char *shortcut, char message[])
+{
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    char line[MAX_LINE_LENGTH];
+    int n;
+
+    FILE *file = fopen(".neogit/configs/shortcuts", "r");
+    int c = fgetc(file);
+    fclose(file);
+
+    if (c == EOF) {
+        chdir(cwd);
+        return false;
+    } else {
+        n = 0;
+        file = fopen(".neogit/configs/shortcuts", "r");
+        while (fgets(line, sizeof(line), file) != NULL) {
+            int length = strlen(line);
+            if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+            n++;
+            if (n % 2 == 0) continue;
+            if (!strcmp(shortcut, line)) {
+                chdir(cwd); 
+                fgets(line, sizeof(line), file);
+                length = strlen(line);
+                if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+                strcpy(message, line);
+                return true;
+            }
+        }
+        fclose(file);
+        chdir(cwd);
+    }
+
+    return false;
+}
+
+void run_set(int argc, char * const argv[])
+{
+    if (argc < 6) {
+        printf("invalid command\n");
+        return;
+    }
+
+    if (strlen(argv[3]) > 72) {
+        printf("shortcut message too long\n");
+        return;
+    }
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+
+    FILE *file = fopen(".neogit/configs/shortcuts", "a");
+    fprintf(file, "%s\n", argv[5]);
+    fprintf(file, "%s\n", argv[3]);
+    fclose(file);
+
+    chdir(cwd);
+}
+
+void run_replace(int argc, char * const argv[])
+{
+    if (argc < 6) {
+        printf("invalid command\n");
+        return;
+    }
+
+    if (strlen(argv[3]) > 72) {
+        printf("new shortcut message is too long\n");
+        return;
+    }
+
+    char message[MAX_MESSAGE_LENGTH];
+    if (!shortcut_exists(argv[5], message)) {
+        printf("shortcut doesn't exist\n");
+        return;
+    }
+
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/configs");
+
+    char line[MAX_LINE_LENGTH];
+    int n;
+
+    FILE *file = fopen("shortcuts", "r");
+    FILE *out = fopen("out", "w");
+
+    n = 0;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        n++;
+        if (n % 2 == 1) {
+            if (!strcmp(argv[5], line)) {
+                fprintf(out, "%s\n", line);
+                fgets(line, sizeof(line), file);
+                length = strlen(line);
+                if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+                fprintf(out, "%s\n", argv[3]);
+                n++;
+            } else fprintf(out, "%s\n", line);
+        } else fprintf(out, "%s\n", line);
+    }
+    fclose(file); fclose(out);
+    remove("shortcuts");
+    rename("out", "shortcuts");
+    chdir(cwd);
+}
+
+void run_remove(int argc, char * const argv[])
+{
+    if (argc < 4) {
+        printf("invalid command\n");
+        return;
+    }
+
+    char message[MAX_MESSAGE_LENGTH];
+    if (!shortcut_exists(argv[5], message)) {
+        printf("shortcut doesn't exist\n");
+        return;
+    }
+
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/configs");
+
+    char line[MAX_LINE_LENGTH];
+    int n;
+
+    FILE *file = fopen("shortcuts", "r");
+    FILE *out = fopen("out", "w");
+
+    n = 0;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        n++;
+        if (n % 2 == 1) {
+            if (!strcmp(argv[3], line)) n += 2;
+            else fprintf(out, "%s\n", line);
+        } else fprintf(out, "%s\n", line);
+    }
+    fclose(file); fclose(out);
+    remove("shortcuts");
+    rename("out", "shortcuts");
     chdir(cwd);
 }
 
@@ -765,7 +923,7 @@ void add_commit_to_branch(int commit, char *branch)
 
 void run_commit(int argc, char * const argv[])
 {
-    if (argc < 4 || strcmp(argv[2], "-m")) {
+    if (argc < 4) {
         printf("invalid command\n");
         return;
     }
@@ -781,9 +939,17 @@ void run_commit(int argc, char * const argv[])
         return;
     }
 
-    if (strlen(argv[3]) > 72) {
+    if (!strcmp(argv[2], "-m") && strlen(argv[3]) > 72) {
         printf("commit message too long!\n");
         return;
+    }
+
+    char message[MAX_MESSAGE_LENGTH];
+    if (!strcmp(argv[2], "-s")) {
+        if (!shortcut_exists(argv[3], message)) {
+            printf("no shortcut exists with this name\n");
+            return;
+        }
     }
 
     char cwd[MAX_PATH_LENGTH];
@@ -802,8 +968,12 @@ void run_commit(int argc, char * const argv[])
 
     fprintf(file, "id: %s\n", number);
 
-    fprintf(file, "message: %s\n", argv[3]);
-
+    if (!strcmp(argv[2], "-m")) {
+        fprintf(file, "message: %s\n", argv[3]);
+    } else if (!strcmp(argv[2], "-s")) {
+        fprintf(file, "message: %s\n", message);
+    }
+    
     time_t t = time(NULL);
     struct tm *tm = localtime(&t);
     fprintf(file, "time: %s", asctime(tm));
