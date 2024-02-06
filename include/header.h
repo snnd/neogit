@@ -87,7 +87,7 @@ bool is_in_last_state(char *filename);
 bool is_in_working_directory(char *path, char *filename);
 void calculate_hash(char *filename, char hash[]);
 void calculate_hash_in_last_state(char *filename, char hash[]);
-bool is_deleted(char *path, char *filename);
+bool is_deleted();
 
 void checkout_branch(char *branch);
 void checkout_commit(char *number);

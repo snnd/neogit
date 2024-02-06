@@ -1193,17 +1193,15 @@ void run_commit(int argc, char * const argv[])
 void calculate_hash(char *filename, char hash[])
 {
     char cmd[MAX_COMMAND_LENGTH] = "md5sum ";
+    strcat(cmd, filename);
     
-    strcat(hash, filename);
-    
-    char buf[MAX_HASH_CODE] = {0};
+    char buf[MAX_HASH_CODE];
     FILE *fp;
     
     fp = popen(cmd, "r");
-
-    while (fgets(buf, sizeof(buf), fp) != NULL) {
-        sscanf(buf, "%s", hash);
-    }
+    
+    fgets(buf, sizeof(buf), fp);
+    sscanf(buf, "%s", hash);
 
     pclose(fp);
 }
@@ -1225,9 +1223,11 @@ void calculate_hash_in_last_state(char *filename, char hash[])
     chdir(cwd);
 }
 
-bool is_deleted(char *path, char *filename)
+bool is_deleted()
 {
     char help[MAX_PATH_LENGTH];
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
     go_to_main_address();
     DIR *dir = opendir(".neogit/last_state");
     struct dirent *entry;
@@ -1235,16 +1235,19 @@ bool is_deleted(char *path, char *filename)
         if (entry->d_type == DT_REG) {
             realpath(entry->d_name, help);
             
-            if (!is_in_working_directory(path, entry->d_name) && !strcmp(entry->d_name, filename)) {
-                chdir(path);
+            if (!is_in_working_directory(cwd, entry->d_name)) {
+                printf("%s ", entry->d_name);
+                if (is_staged(help)) printf("+");
+                else printf("-");
+                printf("D\n");
+                chdir(cwd);
                 closedir(dir);
                 return true;
             }
         }
     }
-    chdir(path);
+    chdir(cwd);
     closedir(dir);
-
     return false;
 }
 
@@ -1258,9 +1261,11 @@ void run_status(int argc, char * const argv[])
     DIR *dir = opendir(".");
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
+        if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
+
         if (entry->d_type == DT_REG) {
             realpath(entry->d_name, help);
-
+            
             if (!is_in_last_state(entry->d_name)) {
                 printf("%s ", entry->d_name);
                 if (is_staged(help)) printf("+");
@@ -1269,18 +1274,8 @@ void run_status(int argc, char * const argv[])
                 continue;
             }
             
-            if (is_deleted(path, entry->d_name)) {
-                printf("%s ", entry->d_name);
-                if (is_staged(help)) printf("+");
-                else printf("-");
-                printf("D\n");
-                continue;
-            }
-            
             calculate_hash(entry->d_name, new_hash);
-            puts(new_hash);
             calculate_hash_in_last_state(entry->d_name, old_hash);
-            puts(old_hash);
             if (strcmp(new_hash, old_hash)) {
                 printf("%s ", entry->d_name);
                 if (is_staged(help)) printf("+");
@@ -1290,6 +1285,8 @@ void run_status(int argc, char * const argv[])
             }
         }
     }
+
+    is_deleted();
     closedir(dir);
 }
 
