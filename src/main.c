@@ -834,6 +834,37 @@ bool is_in_working_directory(char *path, char *filename)
     return false;
 }
 
+void log_author(char *author)
+{
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+    char number[1000];
+    for (int i = commit_number(); i >= 1; i--) {
+        strcpy(number, "");
+        sprintf(number, "%d", i);
+        chdir(number);
+        FILE *file = fopen(".info", "r");
+        char line[MAX_LINE_LENGTH];
+        char person[MAX_NAME_LENGTH];
+        while (fgets(line, sizeof(line), file) != NULL) {
+            int length = strlen(line);
+            if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+            if (strstr(line, "username:")) {
+                sscanf(line, "username: %s\n", person);
+                if (!strcmp(person, author)) {
+                    show_commit_info(number);
+                    printf("\n");
+                }
+            }
+        }
+        fclose(file);
+        chdir("..");
+    }
+    chdir(cwd);
+}
+
 void log_branch(char *branch) 
 {
     if (!branch_exists(branch)) {
@@ -898,9 +929,11 @@ void run_log(int argc, char * const argv[])
             show_commit_info(number);
             if (i != constant) printf("\n");
         }
+        fclose(file);
         chdir(cwd);
     }
     else if (!strcmp(argv[2], "-branch")) log_branch(argv[3]);
+    else if (!strcmp(argv[2], "-author")) log_author(argv[3]);
 }
 
 void add_branch_to_first_commit(char *branch)

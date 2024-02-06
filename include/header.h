@@ -76,6 +76,7 @@ void add_commit_to_branch(int commit, char *branch);
 
 void run_log(int argc, char * const argv[]);
 void log_branch(char *branch);
+void log_author(char *author);
 
 void run_branch(int argc, char * const argv[]);
 void add_branch_to_first_commit(char *branch);
