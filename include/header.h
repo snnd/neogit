@@ -47,6 +47,7 @@ bool tag_exists(char *tag);
 void number_of_files(char *path, int *result);
 bool is_alias(int argc, char * const argv[]);
 bool shortcut_exists(char *shortcut, char message[]);
+void show_commit_info(char *commit_id);
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
@@ -74,8 +75,10 @@ void run_commit(int argc, char * const argv[]);
 void add_commit_to_branch(int commit, char *branch);
 
 void run_log(int argc, char * const argv[]);
+void log_branch(char *branch);
 
 void run_branch(int argc, char * const argv[]);
+void add_branch_to_first_commit(char *branch);
 
 void run_status(int argc, char * const argv[]);
 void add_to_last_state(char command[]);

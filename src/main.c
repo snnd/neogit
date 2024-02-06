@@ -834,34 +834,102 @@ bool is_in_working_directory(char *path, char *filename)
     return false;
 }
 
-void run_log(int argc, char * const argv[])
+void log_branch(char *branch) 
+{
+    if (!branch_exists(branch)) {
+        printf("this branch doesn't exist\n");
+        return;
+    }
+
+    char cwd[MAX_FILENAME_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/branches");
+    FILE *file = fopen(branch, "r");
+    char line[MAX_LINE_LENGTH];
+
+    while (fgets(line, sizeof(line), file) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        show_commit_info(line);
+        printf("\n");
+    }
+    fclose(file);
+    chdir(cwd);
+}
+
+void show_commit_info(char *commit_id)
 {
     char cwd[MAX_FILENAME_LENGTH];
     getcwd(cwd, sizeof(cwd));
     go_to_main_address();
     chdir(".neogit/commits");
-
-    char number[1000];
-    FILE *file;
+    chdir(commit_id);
+    FILE *file = fopen(".info", "r");
     char line[MAX_LINE_LENGTH];
 
-    int constant;
-    if (argc > 2 && !strcmp(argv[2], "-n")) {
-        constant = commit_number() - atoi(argv[3]) + 1;
-    } else constant = 1;
-
-    for (int i = commit_number(); i >= constant; i--) {
-        strcpy(number, "");
-        sprintf(number, "%d", i);
-        chdir(number);
-        file = fopen(".info", "r");
-        while (fgets(line, sizeof(line), file) != NULL) {
-            printf("%s", line);
-        }
-        if (i != constant )printf("\n");
-        fclose(file);
-        chdir("..");
+    while (fgets(line, sizeof(line), file) != NULL) {
+        printf("%s", line);
     }
+    fclose(file);
+    chdir(cwd);
+}
+
+void run_log(int argc, char * const argv[])
+{
+    if (argc == 2 || !strcmp(argv[2], "-n")) {
+        char cwd[MAX_FILENAME_LENGTH];
+        getcwd(cwd, sizeof(cwd));
+        go_to_main_address();
+        chdir(".neogit/commits");
+
+        char number[1000];
+        FILE *file;
+        char line[MAX_LINE_LENGTH];
+
+        int constant;
+        if (argc > 2 && !strcmp(argv[2], "-n")) {
+            constant = commit_number() - atoi(argv[3]) + 1;
+        } else constant = 1;
+
+        for (int i = commit_number(); i >= constant; i--) {
+            strcpy(number, "");
+            sprintf(number, "%d", i);
+            show_commit_info(number);
+            if (i != constant) printf("\n");
+        }
+        chdir(cwd);
+    }
+    else if (!strcmp(argv[2], "-branch")) log_branch(argv[3]);
+}
+
+void add_branch_to_first_commit(char *branch)
+{
+    char number[1000];
+    sprintf(number, "%d", commit_number());
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit/commits");
+    chdir(number);
+    FILE *file = fopen(".info", "r");
+    FILE *out = fopen(".out", "w");
+
+    char line[MAX_LINE_LENGTH];
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        if (strstr(line, "branch:")) {
+            fprintf(out, "%s", line);
+            fprintf(out, " / %s\n", branch);
+        } else fprintf(out, "%s\n", line);
+    }
+    fclose(file);
+    fclose(out);
+    remove(".info");
+    rename(".out", ".info");
+    
     chdir(cwd);
 }
 
@@ -897,6 +965,7 @@ void run_branch(int argc, char * const argv[])
         FILE *file = fopen(argv[2], "w");
         fprintf(file, "%d\n", commit_number());
         fclose(file);
+        add_branch_to_first_commit(argv[2]);
     }
 
     chdir(cwd);
