@@ -398,7 +398,7 @@ void run_remove(int argc, char * const argv[])
     }
 
     char message[MAX_MESSAGE_LENGTH];
-    if (!shortcut_exists(argv[5], message)) {
+    if (!shortcut_exists(argv[3], message)) {
         printf("shortcut doesn't exist\n");
         return;
     }
@@ -420,7 +420,10 @@ void run_remove(int argc, char * const argv[])
         if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
         n++;
         if (n % 2 == 1) {
-            if (!strcmp(argv[3], line)) n += 2;
+            if (!strcmp(argv[3], line)) {
+                fgets(line, sizeof(line), file);
+                n += 2;
+            }
             else fprintf(out, "%s\n", line);
         } else fprintf(out, "%s\n", line);
     }
@@ -1891,6 +1894,9 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "tag")) run_tag(argc, argv);
         else if (!strcmp(argv[1], "diff")) run_diff(argc, argv);
         else if (!strcmp(argv[1], "merge")) run_merge(argc, argv);
+        else if (!strcmp(argv[1], "set")) run_set(argc, argv);
+        else if (!strcmp(argv[1], "replace")) run_replace(argc, argv);
+        else if (!strcmp(argv[1], "remove")) run_remove(argc, argv);
         else if (!is_alias(argc, argv)) printf("please enter a valid command\n");
     }
     else {
