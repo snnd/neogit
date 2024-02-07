@@ -788,7 +788,7 @@ void log_search(char *key)
             int length = strlen(line);
             if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
             if (strstr(line, "message:")) {
-                sscanf(line, "message: %s\n", message);
+                sscanf(line, "message: %[^\n]s\n", message);
                 if (strstr(message, key)) {
                     show_commit_info(number);
                     printf("\n");
@@ -1414,14 +1414,14 @@ bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[
     }
     else return false;
 }
-bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[], char path2[])
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[])
 {
     char filepath[MAX_PATH_LENGTH];
-    realpath(path1, filepath);
+    realpath(commit1, filepath);
     strcat(filepath, "/");
     strcat(filepath, entry1->d_name);
     FILE *file1 = fopen(filepath, "r");
-    realpath(path2, filepath);
+    realpath(commit2, filepath);
     strcat(filepath, "/");
     strcat(filepath, entry2->d_name);
     FILE *file2 = fopen(filepath, "r");
@@ -1444,7 +1444,7 @@ bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[]
         trail(line1); trail(line2);
         if (strcmp(line1, line2)) {
             if (!flag) printf("«««««\n");
-            realpath(path1, filepath);
+            realpath(commit1, filepath);
             strcat(filepath, "/");
             strcat(filepath, entry1->d_name);
             puts(filepath);
@@ -1452,7 +1452,7 @@ bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[]
             printf(MAG);
             printf("%s\n", line1);
             printf(RESET);
-            realpath(path2, filepath);
+            realpath(commit2, filepath);
             strcat(filepath, "/");
             strcat(filepath, entry2->d_name);
             puts(filepath);
@@ -1748,14 +1748,77 @@ void run_merge(int argc, char * const argv[])
     char number[1000];
     sprintf(number, "%d", commit_number() + 1);
     mkdir(number, 0777);
+    struct dirent *entry1;
+    struct dirent *entry2;
+    int flag;
+    char command[MAX_COMMAND_LENGTH];
+    char path[MAX_PATH_LENGTH];
+    DIR *dir1 = opendir(commit1);
+    while ((entry1 = readdir(dir1)) != NULL) {
+        if ((entry1->d_name)[0] == '.' || !strcmp(entry1->d_name, "sana_niroomand") || entry1->d_type != DT_REG) continue;
+        flag = 0;
+        DIR *dir2 = opendir(commit2);
+        while ((entry2 = readdir(dir2)) != NULL) {
+            if (!strcmp(entry1->d_name, entry2->d_name) && entry2->d_type == DT_REG) {flag = 1; break;}
+        }
+        closedir(dir2);
+        if (!flag) {
+            chdir(commit1);
+            realpath(entry1->d_name, path);
+            chdir("..");
+            strcpy(command, "cp ");
+            if (entry1->d_type == DT_DIR) strcat(command, "-r ");
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, number);
+            system(command);
+        } else {
+            if (diff_files_merge(entry1, entry2, commit1, commit2)) {
+                printf("sorry merge cannot happen. we reached a conflict!");
+                strcpy(command, "rm -r ");
+                strcat(command, number);
+                system(command);
+                closedir(dir1);
+                chdir(cwd);
+                return;
+            } else {
+                chdir(commit1);
+                realpath(entry1->d_name, path);
+                chdir("..");
+                strcpy(command, "cp ");
+                if (entry1->d_type == DT_DIR) strcat(command, "-r ");
+                strcat(command, path);
+                strcat(command, " ");
+                strcat(command, number);
+                system(command);
+            }
+        }
+    }
+    closedir(dir1);
+    DIR *dir2 = opendir(commit2);
+    while ((entry2 = readdir(dir2)) != NULL) {
+        if ((entry2->d_name)[0] == '.' || !strcmp(entry2->d_name, "sana_niroomand") || entry2->d_type != DT_REG) continue;
+        flag = 0;
+        dir1 = opendir(commit1);
+        while ((entry1 = readdir(dir1)) != NULL) {
+            if (!strcmp(entry1->d_name, entry2->d_name) && entry1->d_type == DT_REG) {flag = 1; break;}
+        }
+        closedir(dir1);
+        if (!flag) {
+            chdir(commit2);
+            realpath(entry2->d_name, path);
+            chdir("..");
+            strcpy(command, "cp ");
+            if (entry2->d_type == DT_DIR) strcat(command, "-r ");
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, number);
+            system(command);
+        }
+    }
 
-    
-    if (!merge_directory(commit1, commit2, number)) return;
-
-    
     add_commit_to_branch(commit_number(), argv[3]);
     add_commit_to_merged(commit_number());
-
     chdir(number);
     FILE *file = fopen(".info", "w");
 
@@ -1774,7 +1837,44 @@ void run_merge(int argc, char * const argv[])
     number_of_files(number, &files);
     fprintf(file, "files committed: %d\n", files);
     fclose(file);
+    closedir(dir2);
     chdir(cwd);
+}
+void run_grep(int argc, char * const argv[])
+{
+    if (argc < 6) {
+        printf("invalid command\n");
+        return;
+    }
+
+    bool flag_n = false;
+
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    if (!strcmp(argv[6], "-c")) {
+        go_to_main_address();
+        chdir(".neogit/commits");
+        chdir(argv[7]);    
+    }
+    if (!strcmp(argv[6], "-n") || !strcmp(argv[8], "-n")) {
+        flag_n = true;
+    }
+
+    FILE *file = fopen(argv[3], "r");
+    char line[MAX_LINE_LENGTH];
+    int n = 0;
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        n++;
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        if (strstr(line, argv[5])) {
+            if (flag_n) printf("line %d: ", n);
+            printf("%s\n", line);
+        }
+    }
+    fclose(file);
+    chdir(cwd);
+    
 }
 void number_of_files(char *path, int *files)
 {
@@ -1931,6 +2031,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(argv[1], "set")) run_set(argc, argv);
         else if (!strcmp(argv[1], "replace")) run_replace(argc, argv);
         else if (!strcmp(argv[1], "remove")) run_remove(argc, argv);
+        else if (!strcmp(argv[1], "grep")) run_grep(argc, argv);
         else if (!is_alias(argc, argv)) printf("please enter a valid command\n");
     }
     else {
