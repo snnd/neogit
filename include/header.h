@@ -32,7 +32,6 @@ typedef struct {
     char username[MAX_NAME_LENGTH];
     char email[MAX_NAME_LENGTH];
 } user_info;
-
 bool neogit_exists();
 void iterate(void *func(char *path));
 void write_path_to_file(char *path);
@@ -48,7 +47,6 @@ bool is_alias(int argc, char * const argv[]);
 bool shortcut_exists(char *shortcut, char message[]);
 void show_commit_info(char *commit_id);
 bool is_merged(int commit);
-
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
 void run_config_email(int argc, char * const argv[]);
@@ -90,9 +88,10 @@ void run_diff(int argc, char * const argv[]);
 void trail(char line[]);
 bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);
 void run_merge(int argc, char * const argv[]);
+bool merge_directory(char *path1, char *path2, char *number);
 void branch_head(char *branch, char commit[]);
-bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[]);
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[], char path2[]);
 void add_commit_to_merged(int commit);
-
 void run_set(int argc, char * const argv[]);
+void run_replace(int argc, char * const argv[]);
 void run_replace(int argc, char * const argv[]);
