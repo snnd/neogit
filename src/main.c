@@ -675,7 +675,7 @@ int commit_number()
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
         result++;
     } 
-
+    closedir(dir);
     chdir(cwd);
     return result;
 }
@@ -1942,11 +1942,12 @@ void run_merge(int argc, char * const argv[])
     char number[1000];
     sprintf(number, "%d", commit_number() + 1);
     mkdir(number, 0777);
-
+    
     if (!merge_directory(commit1, commit2, number)) return;
-
+    
     add_commit_to_branch(commit_number(), argv[3]);
     add_commit_to_merged(commit_number());
+    
     chdir(number);
     FILE *file = fopen(".info", "w");
 
