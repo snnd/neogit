@@ -103,8 +103,9 @@ void trail(char line[]);
 bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);
 
 void run_merge(int argc, char * const argv[]);
+void merge_directory(char *path1, char *path2, char *number);
 void branch_head(char *branch, char commit[]);
-bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[]);
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[], char path2[]);
 void add_commit_to_merged(int commit);
 
 void run_set(int argc, char * const argv[]);
