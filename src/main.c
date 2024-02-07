@@ -1394,7 +1394,7 @@ void run_revert(int argc, char * const argv[])
     if (strcmp(argv[2], "-n")) {
         if (strstr(argv[argc - 1], "HEAD-")) {
             for (int i = commit_number(); i >= (commit_number() - (argv[argc - 1][5] - '0')); i--) {
-                if (!is_merged(i)) {
+                if (is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1402,7 +1402,7 @@ void run_revert(int argc, char * const argv[])
             
         } else {
             for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
-                if (!is_merged(i)) {
+                if (is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1453,7 +1453,7 @@ void run_revert(int argc, char * const argv[])
     } else {
         char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
         if (argc == 3) {
-            if (!is_merged(commit_number())) {
+            if (is_merged(commit_number())) {
                 printf("merge error\n");
                 return;
             }
@@ -1462,7 +1462,7 @@ void run_revert(int argc, char * const argv[])
             strcat(command, number);
         } else {
             for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
-                if (!is_merged(i)) {
+                if (is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1601,7 +1601,6 @@ bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[]
     strcat(filepath, "/");
     strcat(filepath, entry2->d_name);
     FILE *file2 = fopen(filepath, "r");
-
     char line1[MAX_LINE_LENGTH], line2[MAX_LINE_LENGTH];
     int n1 = 0, n2 = 0;
     int flag = 0;
@@ -1823,7 +1822,7 @@ void add_commit_to_merged(int commit)
     chdir(cwd);
 }
 
-void merge_directory(char *path1, char *path2, char *number)
+bool merge_directory(char *path1, char *path2, char *number)
 {
     char cwd[MAX_PATH_LENGTH];
     getcwd(cwd, sizeof(cwd));
@@ -1860,17 +1859,13 @@ void merge_directory(char *path1, char *path2, char *number)
                 chdir(path1);
                 realpath(entry1->d_name, new_dir1);
                 chdir("..");
-                strcat(new_dir1, "/");
-                strcat(new_dir1, entry1->d_name);
                 chdir(path2);
                 realpath(entry1->d_name, new_dir2);
                 chdir("..");
-                strcat(new_dir2, "/");
-                strcat(new_dir2, entry1->d_name);
                 go_to_main_address();
                 chdir(".neogit/commits");
                 chdir(number);
-                mkdir(entry1->d_name, "0777");
+                mkdir(entry1->d_name, 0777);
                 char new_number[MAX_PATH_LENGTH];
                 strcpy(new_number, number);
                 strcat(new_number, "/");
@@ -1878,14 +1873,15 @@ void merge_directory(char *path1, char *path2, char *number)
                 merge_directory(new_dir1, new_dir2, new_number);
             } else {
                 if (diff_files_merge(entry1, entry2, path1, path2)) {
-                    printf("sorry merge cannot happen. we reached a conflict!");
+                    printf("Sorry merge cannot happen. We reached a conflict!\n");
                     strcpy(command, "rm -r ");
                     strcat(command, number);
                     system(command);
                     closedir(dir1);
                     chdir(cwd);
-                    return;
+                    return false;
                 } else {
+                    // puts(".");
                     chdir(path1);
                     realpath(entry1->d_name, path);
                     chdir("..");
@@ -1924,6 +1920,8 @@ void merge_directory(char *path1, char *path2, char *number)
     closedir(dir2);
     
     chdir(cwd);
+
+    return true;
 }
 
 void run_merge(int argc, char * const argv[])
@@ -1945,7 +1943,7 @@ void run_merge(int argc, char * const argv[])
     sprintf(number, "%d", commit_number() + 1);
     mkdir(number, 0777);
 
-    merge_directory(commit1, commit2, number);
+    if (!merge_directory(commit1, commit2, number)) return;
 
     add_commit_to_branch(commit_number(), argv[3]);
     add_commit_to_merged(commit_number());
