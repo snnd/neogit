@@ -34,7 +34,6 @@ typedef struct {
 } user_info;
 
 bool neogit_exists();
-
 void iterate(void *func(char *path));
 void write_path_to_file(char *path);
 void remove_path_from_file(char *path);
@@ -56,32 +55,25 @@ void run_config_email(int argc, char * const argv[]);
 void run_init(int argc, char * const argv[]);
 void run_config_alias(int argc, char * const argv[]);
 bool check_command(char command[]);
-
 bool is_staged(char *path);
 bool any_staged();
 void add_to_staging(char *path);
 void run_add(int argc, char * const argv[]);
 void add_space(int depth, int first_depth);
 void run_add_n_recursive(int depth, int first_depth);
-
 void remove_from_staging(char *path);
 void run_reset(int argc, char * const argv[]);
 void reset_undo();
-
 void write_path_to_tracks(char *path);
 bool is_tracked(char *path);
-
 int commit_number();
 void run_commit(int argc, char * const argv[]);
 void add_commit_to_branch(int commit, char *branch);
-
 void run_log(int argc, char * const argv[]);
 void log_branch(char *branch);
 void log_author(char *author);
-
 void run_branch(int argc, char * const argv[]);
 void add_branch_to_first_commit(char *branch);
-
 void run_status(int argc, char * const argv[]);
 void add_to_last_state(char command[]);
 bool is_in_last_state(char *filename);
@@ -89,24 +81,18 @@ bool is_in_working_directory(char *path, char *filename);
 void calculate_hash(char *filename, char hash[]);
 void calculate_hash_in_last_state(char *filename, char hash[]);
 bool is_deleted();
-
 void checkout_branch(char *branch);
 void checkout_commit(char *number);
 void run_checkout(int argc, char * const argv[]);
-
 void run_revert(int argc, char * const argv[]);
-
 void run_tag(int argc, char * const argv[]);
-
 void run_diff(int argc, char * const argv[]);
 void trail(char line[]);
 bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[]);
-
 void run_merge(int argc, char * const argv[]);
-bool merge_directory(char *path1, char *path2, char *number);
 void branch_head(char *branch, char commit[]);
-bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[], char path2[]);
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[]);
 void add_commit_to_merged(int commit);
 
 void run_set(int argc, char * const argv[]);
-void run_replace(int argc, char * const argv[]);  
+void run_replace(int argc, char * const argv[]);

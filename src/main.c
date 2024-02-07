@@ -675,7 +675,7 @@ int commit_number()
         if ((entry->d_name)[0] == '.' || !strcmp(entry->d_name, "sana_niroomand")) continue;
         result++;
     } 
-    closedir(dir);
+
     chdir(cwd);
     return result;
 }
@@ -1394,7 +1394,7 @@ void run_revert(int argc, char * const argv[])
     if (strcmp(argv[2], "-n")) {
         if (strstr(argv[argc - 1], "HEAD-")) {
             for (int i = commit_number(); i >= (commit_number() - (argv[argc - 1][5] - '0')); i--) {
-                if (is_merged(i)) {
+                if (!is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1402,7 +1402,7 @@ void run_revert(int argc, char * const argv[])
             
         } else {
             for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
-                if (is_merged(i)) {
+                if (!is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1453,7 +1453,7 @@ void run_revert(int argc, char * const argv[])
     } else {
         char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
         if (argc == 3) {
-            if (is_merged(commit_number())) {
+            if (!is_merged(commit_number())) {
                 printf("merge error\n");
                 return;
             }
@@ -1462,7 +1462,7 @@ void run_revert(int argc, char * const argv[])
             strcat(command, number);
         } else {
             for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
-                if (is_merged(i)) {
+                if (!is_merged(i)) {
                     printf("merge error\n");
                     return;
                 }
@@ -1590,17 +1590,18 @@ bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[
     else return false;
 }
 
-bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[], char path2[])
+bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[])
 {
     char filepath[MAX_PATH_LENGTH];
-    realpath(path1, filepath);
+    realpath(commit1, filepath);
     strcat(filepath, "/");
     strcat(filepath, entry1->d_name);
     FILE *file1 = fopen(filepath, "r");
-    realpath(path2, filepath);
+    realpath(commit2, filepath);
     strcat(filepath, "/");
     strcat(filepath, entry2->d_name);
     FILE *file2 = fopen(filepath, "r");
+
     char line1[MAX_LINE_LENGTH], line2[MAX_LINE_LENGTH];
     int n1 = 0, n2 = 0;
     int flag = 0;
@@ -1622,7 +1623,7 @@ bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[]
 
         if (strcmp(line1, line2)) {
             if (!flag) printf("«««««\n");
-            realpath(path1, filepath);
+            realpath(commit1, filepath);
             strcat(filepath, "/");
             strcat(filepath, entry1->d_name);
             puts(filepath);
@@ -1630,7 +1631,7 @@ bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char path1[]
             printf(MAG);
             printf("%s\n", line1);
             printf(RESET);
-            realpath(path2, filepath);
+            realpath(commit2, filepath);
             strcat(filepath, "/");
             strcat(filepath, entry2->d_name);
             puts(filepath);
@@ -1822,108 +1823,6 @@ void add_commit_to_merged(int commit)
     chdir(cwd);
 }
 
-bool merge_directory(char *path1, char *path2, char *number)
-{
-    char cwd[MAX_PATH_LENGTH];
-    getcwd(cwd, sizeof(cwd));
-    go_to_main_address();
-    chdir(".neogit/commits");
-    struct dirent *entry1;
-    struct dirent *entry2;
-    int flag;
-    char command[MAX_COMMAND_LENGTH];
-    char path[MAX_PATH_LENGTH];
-    DIR *dir1 = opendir(path1);
-    while ((entry1 = readdir(dir1)) != NULL) {
-        if ((entry1->d_name)[0] == '.' || !strcmp(entry1->d_name, "sana_niroomand")) continue;
-        flag = 0;
-        DIR *dir2 = opendir(path2);
-        while ((entry2 = readdir(dir2)) != NULL) {
-            if (!strcmp(entry1->d_name, entry2->d_name)) {flag = 1; break;}
-        }
-        closedir(dir2);
-        if (!flag) {
-            chdir(path1);
-            realpath(entry1->d_name, path);
-            chdir("..");
-            strcpy(command, "cp ");
-            if (entry1->d_type == DT_DIR) strcat(command, "-r ");
-            strcat(command, path);
-            strcat(command, " ");
-            strcat(command, number);
-            system(command);
-        } else {
-            if (entry1->d_type == DT_DIR) {
-                char new_dir1[MAX_PATH_LENGTH];
-                char new_dir2[MAX_PATH_LENGTH];
-                chdir(path1);
-                realpath(entry1->d_name, new_dir1);
-                chdir("..");
-                chdir(path2);
-                realpath(entry1->d_name, new_dir2);
-                chdir("..");
-                go_to_main_address();
-                chdir(".neogit/commits");
-                chdir(number);
-                mkdir(entry1->d_name, 0777);
-                char new_number[MAX_PATH_LENGTH];
-                strcpy(new_number, number);
-                strcat(new_number, "/");
-                strcat(new_number, entry1->d_name);
-                merge_directory(new_dir1, new_dir2, new_number);
-            } else {
-                if (diff_files_merge(entry1, entry2, path1, path2)) {
-                    printf("Sorry merge cannot happen. We reached a conflict!\n");
-                    strcpy(command, "rm -r ");
-                    strcat(command, number);
-                    system(command);
-                    closedir(dir1);
-                    chdir(cwd);
-                    return false;
-                } else {
-                    // puts(".");
-                    chdir(path1);
-                    realpath(entry1->d_name, path);
-                    chdir("..");
-                    strcpy(command, "cp ");
-                    strcat(command, path);
-                    strcat(command, " ");
-                    strcat(command, number);
-                    system(command);
-                }
-            }
-        }
-    }
-    closedir(dir1);
-
-    DIR *dir2 = opendir(path2);
-    while ((entry2 = readdir(dir2)) != NULL) {
-        if ((entry2->d_name)[0] == '.' || !strcmp(entry2->d_name, "sana_niroomand")) continue;
-        flag = 0;
-        dir1 = opendir(path1);
-        while ((entry1 = readdir(dir1)) != NULL) {
-            if (!strcmp(entry1->d_name, entry2->d_name)) {flag = 1; break;}
-        }
-        closedir(dir1);
-        if (!flag) {
-            chdir(path2);
-            realpath(entry2->d_name, path);
-            chdir("..");
-            strcpy(command, "cp ");
-            if (entry2->d_type == DT_DIR) strcat(command, "-r ");
-            strcat(command, path);
-            strcat(command, " ");
-            strcat(command, number);
-            system(command);
-        }
-    }
-    closedir(dir2);
-    
-    chdir(cwd);
-
-    return true;
-}
-
 void run_merge(int argc, char * const argv[])
 {
     if (argc < 5) {
@@ -1942,12 +1841,78 @@ void run_merge(int argc, char * const argv[])
     char number[1000];
     sprintf(number, "%d", commit_number() + 1);
     mkdir(number, 0777);
-    
-    if (!merge_directory(commit1, commit2, number)) return;
-    
+    struct dirent *entry1;
+    struct dirent *entry2;
+    int flag;
+    char command[MAX_COMMAND_LENGTH];
+    char path[MAX_PATH_LENGTH];
+    DIR *dir1 = opendir(commit1);
+    while ((entry1 = readdir(dir1)) != NULL) {
+        if ((entry1->d_name)[0] == '.' || !strcmp(entry1->d_name, "sana_niroomand") || entry1->d_type != DT_REG) continue;
+        flag = 0;
+        DIR *dir2 = opendir(commit2);
+        while ((entry2 = readdir(dir2)) != NULL) {
+            if (!strcmp(entry1->d_name, entry2->d_name) && entry2->d_type == DT_REG) {flag = 1; break;}
+        }
+        closedir(dir2);
+        if (!flag) {
+            chdir(commit1);
+            realpath(entry1->d_name, path);
+            chdir("..");
+            strcpy(command, "cp ");
+            if (entry1->d_type == DT_DIR) strcat(command, "-r ");
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, number);
+            system(command);
+        } else {
+            if (diff_files_merge(entry1, entry2, commit1, commit2)) {
+                printf("sorry merge cannot happen. we reached a conflict!");
+                strcpy(command, "rm -r ");
+                strcat(command, number);
+                system(command);
+                closedir(dir1);
+                chdir(cwd);
+                return;
+            } else {
+                chdir(commit1);
+                realpath(entry1->d_name, path);
+                chdir("..");
+                strcpy(command, "cp ");
+                if (entry1->d_type == DT_DIR) strcat(command, "-r ");
+                strcat(command, path);
+                strcat(command, " ");
+                strcat(command, number);
+                system(command);
+            }
+        }
+    }
+    closedir(dir1);
+
+    DIR *dir2 = opendir(commit2);
+    while ((entry2 = readdir(dir2)) != NULL) {
+        if ((entry2->d_name)[0] == '.' || !strcmp(entry2->d_name, "sana_niroomand") || entry2->d_type != DT_REG) continue;
+        flag = 0;
+        dir1 = opendir(commit1);
+        while ((entry1 = readdir(dir1)) != NULL) {
+            if (!strcmp(entry1->d_name, entry2->d_name) && entry1->d_type == DT_REG) {flag = 1; break;}
+        }
+        closedir(dir1);
+        if (!flag) {
+            chdir(commit2);
+            realpath(entry2->d_name, path);
+            chdir("..");
+            strcpy(command, "cp ");
+            if (entry2->d_type == DT_DIR) strcat(command, "-r ");
+            strcat(command, path);
+            strcat(command, " ");
+            strcat(command, number);
+            system(command);
+        }
+    }
+
     add_commit_to_branch(commit_number(), argv[3]);
     add_commit_to_merged(commit_number());
-    
     chdir(number);
     FILE *file = fopen(".info", "w");
 
@@ -1968,6 +1933,7 @@ void run_merge(int argc, char * const argv[])
     number_of_files(number, &files);
     fprintf(file, "files committed: %d\n", files);
     fclose(file);
+    closedir(dir2);
     chdir(cwd);
 }
 
