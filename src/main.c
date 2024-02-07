@@ -82,6 +82,9 @@ void create_configs()
     file = fopen(".neogit/staging", "w");
     fclose(file);
 
+    file = fopen(".neogit/merged", "w");
+    fclose(file);
+
     mkdir(".neogit/commits", 0777);
     
     mkdir(".neogit/last_state", 0777);
@@ -110,7 +113,7 @@ void create_configs()
     fclose(file); 
 
     file = fopen(".neogit/configs/shortcuts", "w");
-    fclose(file); 
+    fclose(file);
 
     file = fopen(".neogit/configs/branch", "w");
     fprintf(file, "main\n");
@@ -1388,50 +1391,86 @@ void run_revert(int argc, char * const argv[])
         return;
     }
 
-    bool flag_e = false;
-
-    char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
-    strcat(command, argv[argc - 1]);
-    system(command);
-    char cwd[MAX_PATH_LENGTH];
-    getcwd(cwd, sizeof(cwd));
-    go_to_main_address();
-    chdir(".neogit/commits");
-    strcpy(command, "cp -r ");
-    strcat(command, argv[argc - 1]);
-    strcat(command, " ");
-    char dest[1000];
-    sprintf(dest, "%d", commit_number() + 1);
-    strcat(command, dest);
-    system(command);
-    chdir(dest);
-    FILE *file = fopen(".info", "r");
-    FILE *out = fopen(".out", "w");
-    char line[MAX_LINE_LENGTH];
-    while ((fgets(line, sizeof(line), file)) != NULL) {
-        int length = strlen(line);
-        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
-        if (strstr(line, "id: ")) fprintf(out, "id: %d\n", commit_number());
-        else if (strstr(line, "time: ")) {
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            fprintf(out, "time: %s", asctime(tm));
+    if (strcmp(argv[2], "-n")) {
+        if (strstr(argv[argc - 1], "HEAD-")) {
+            for (int i = commit_number(); i >= (commit_number() - (argv[argc - 1][5] - '0')); i--) {
+                if (!is_merged(i)) {
+                    printf("merge error\n");
+                    return;
+                }
+            }
+            
+        } else {
+            for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
+                if (!is_merged(i)) {
+                    printf("merge error\n");
+                    return;
+                }
+            } 
         }
-        else if (strstr(line, "message: ") && flag_e) {
-            char new_message[MAX_MESSAGE_LENGTH];
-            puts("enter the new message please:");
-            fgets(new_message, sizeof(new_message), stdin);
-            length = strlen(new_message);
-            if (length > 0 && new_message[length - 1] == '\n') new_message[length - 1] = '\0';
-            fprintf(out, "message: %s\n", new_message);
+        char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
+        strcat(command, argv[argc - 1]);
+        system(command);
+        char cwd[MAX_PATH_LENGTH];
+        getcwd(cwd, sizeof(cwd));
+        go_to_main_address();
+        chdir(".neogit/commits");
+        strcpy(command, "cp -r ");
+        if (strstr(argv[argc - 1], "HEAD-")) {
+            char number[1000];
+            sprintf(number, "%d", commit_number() - (argv[argc - 1][5] - '0'));
+            strcat(command, number);
         }
-        else fprintf(out, "%s\n", line);
+        else strcat(command, argv[argc - 1]);
+        strcat(command, " ");
+        char dest[1000];
+        sprintf(dest, "%d", commit_number() + 1);
+        strcat(command, dest);
+        system(command);
+        chdir(dest);
+        FILE *file = fopen(".info", "r");
+        FILE *out = fopen(".out", "w");
+        char line[MAX_LINE_LENGTH];
+        while ((fgets(line, sizeof(line), file)) != NULL) {
+            int length = strlen(line);
+            if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+            if (strstr(line, "id: ")) fprintf(out, "id: %d\n", commit_number());
+            else if (strstr(line, "time: ")) {
+                time_t t = time(NULL);
+                struct tm *tm = localtime(&t);
+                fprintf(out, "time: %s", asctime(tm));
+            }
+            else if (strstr(line, "message: ") && !strcmp(argv[2], "-m")) {
+                fprintf(out, "message: %s\n", argv[3]);
+            }
+            else fprintf(out, "%s\n", line);
+        }
+        fclose(file);
+        fclose(out);
+        remove(".info");
+        rename(".out", ".info");
+        chdir(cwd);
+    } else {
+        char command[MAX_COMMAND_LENGTH] = "neogit checkout ";
+        if (argc == 3) {
+            if (!is_merged(commit_number())) {
+                printf("merge error\n");
+                return;
+            }
+            char number[1000];
+            sprintf(number, "%d", commit_number());
+            strcat(command, number);
+        } else {
+            for (int i = commit_number(); i >= atoi(argv[argc - 1]); i--) {
+                if (!is_merged(i)) {
+                    printf("merge error\n");
+                    return;
+                }
+            } 
+            strcat(command, argv[argc - 1]);
+        }
+        system(command);
     }
-    fclose(file);
-    fclose(out);
-    remove(".info");
-    rename(".out", ".info");
-    chdir(cwd);
 }
 
 void run_tag(int argc, char * const argv[])
@@ -1743,6 +1782,47 @@ void branch_head(char *branch, char commit[])
     chdir(cwd);
 }
 
+bool is_merged(int commit)
+{
+    char number[1000];
+    sprintf(number, "%d", commit);
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit");
+    FILE *file = fopen("merged", "r");
+    char line[MAX_LINE_LENGTH];
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        if (!strcmp(line, number)) {chdir(cwd); return true;}
+    }
+    chdir(cwd);
+    return false;
+}
+
+void add_commit_to_merged(int commit)
+{
+    char cwd[MAX_PATH_LENGTH];
+    getcwd(cwd, sizeof(cwd));
+    go_to_main_address();
+    chdir(".neogit");
+    FILE *file = fopen("merged", "r");
+    FILE *out = fopen("out", "w");
+    char line[MAX_LINE_LENGTH];
+    fprintf(out, "%d\n", commit);
+    while ((fgets(line, sizeof(line), file)) != NULL) {
+        int length = strlen(line);
+        if (length > 0 && line[length - 1] == '\n') line[length - 1] = '\0';
+        fprintf(out, "%s\n", line);
+    }
+    fclose(file);
+    fclose(out);
+    remove("merged");
+    rename("out", "merged");
+    chdir(cwd);
+}
+
 void run_merge(int argc, char * const argv[])
 {
     if (argc < 5) {
@@ -1832,6 +1912,7 @@ void run_merge(int argc, char * const argv[])
     }
 
     add_commit_to_branch(commit_number(), argv[3]);
+    add_commit_to_merged(commit_number());
     chdir(number);
     FILE *file = fopen(".info", "w");
 

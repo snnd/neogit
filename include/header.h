@@ -48,6 +48,7 @@ void number_of_files(char *path, int *result);
 bool is_alias(int argc, char * const argv[]);
 bool shortcut_exists(char *shortcut, char message[]);
 void show_commit_info(char *commit_id);
+bool is_merged(int commit);
 
 void create_configs();
 void run_config_username(int argc, char * const argv[]);
@@ -104,6 +105,7 @@ bool diff_files(struct dirent *entry1, struct dirent *entry2, char * const argv[
 void run_merge(int argc, char * const argv[]);
 void branch_head(char *branch, char commit[]);
 bool diff_files_merge(struct dirent *entry1, struct dirent *entry2, char commit1[], char commit2[]);
+void add_commit_to_merged(int commit);
 
 void run_set(int argc, char * const argv[]);
 void run_replace(int argc, char * const argv[]);
